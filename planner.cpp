@@ -80,35 +80,37 @@ void aStar::backTrack(pair<int,int> goal)
 }
 
 
-/* This function checks if the successor is not in collision and is within the
-bounds of the map. It returns 1 if the successor is valid, and 0 if it is not. */
-int aStar::sIsValid(int sIndex)
-{
-    if (map[sIndex] < collision_thresh)
-    {
-        if (indexToXY(sIndex).first > 1 && indexToXY(sIndex).first < x_size)
-        {
-            if (indexToXY(sIndex).second > 1 && indexToXY(sIndex).second < y_size)
-                return 1;
-        }
-    }
-    return 0;
-}
-
-/* This function returns the successor index */
-int aStar::sIndex(int s, int nodeIndex)
-{
-    //get node coordinates from index
-    pair<int, int> nodeCoordinates = indexToXY(nodeIndex);
-    int successorX = nodeCoordinates.first + successors[0][s];
-    int successorY = nodeCoordinates.second + successors[1][s];
-
-    return xyToIndex(successorX, successorY);
-}
+///* This function checks if the successor is not in collision and is within the
+//bounds of the map. It returns 1 if the successor is valid, and 0 if it is not. */
+//int aStar::sIsValid(int sIndex)
+//{
+//    if (map[sIndex] < collision_thresh)
+//    {
+//        if (indexToXY(sIndex).first > 1 && indexToXY(sIndex).first < x_size)
+//        {
+//            if (indexToXY(sIndex).second > 1 && indexToXY(sIndex).second < y_size)
+//                return 1;
+//        }
+//    }
+//    return 0;
+//}
+//
+///* This function returns the successor index */
+//int aStar::sIndex(int s, int nodeIndex)
+//{
+//    //get node coordinates from index
+//    pair<int, int> nodeCoordinates = indexToXY(nodeIndex);
+//    int successorX = nodeCoordinates.first + successors[0][s];
+//    int successorY = nodeCoordinates.second + successors[1][s];
+//
+//    return xyToIndex(successorX, successorY);
+//}
 
 /* This is the key function of the planner which implements the A* algorithm*/
 void aStar::computePath()
 {
+    int goalposeX_h = (int)target_traj[target_steps - 1];
+    int goalposeY_h = (int)target_traj[target_steps - 1 + target_steps];
     int k, j;
     int newx;
     int newy;
@@ -136,11 +138,13 @@ void aStar::computePath()
                      continue;*/
             if ((newx >= 1 && newx <= x_size && newy >= 1 && newy <= y_size && ((int)map[GETMAPINDEX(newx, newy, x_size, y_size)] < collision_thresh))) {
 
-
+                int h_n = (int)sqrt(((newx - goalposeX_h) * (newx - goalposeX_h) + (newy - goalposeY_h) * (newy - goalposeY_h)));
                 if (cellInfo[xyToIndex(newx,newy)].g > cellInfo[node.second].g + this->map[xyToIndex(newx, newy)]) //If g of new > g of curr + cost of new
                 {
                     cellInfo[xyToIndex(newx, newy)].g = cellInfo[node.second].g + this->map[xyToIndex(newx, newy)];  //Set g of new = g of curr + cost of new
-                    openList.push(make_pair(cellInfo[xyToIndex(newx, newy)].g, xyToIndex(newx, newy)));
+                    cellInfo[xyToIndex(newx, newy)].h = h_n;
+                    cellInfo[xyToIndex(newx, newy)].f = cellInfo[xyToIndex(newx, newy)].g + cellInfo[xyToIndex(newx, newy)].h;
+                    openList.push(make_pair(cellInfo[xyToIndex(newx, newy)].f, xyToIndex(newx, newy)));
                     cellInfo[xyToIndex(newx, newy)].parent = node.second;
                 }
             }

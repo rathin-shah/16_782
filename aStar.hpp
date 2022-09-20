@@ -4,7 +4,7 @@ using namespace std;
 
 class aStar
 {
-    double*	map;
+    double* map;
     int collision_thresh;
     int x_size;     //Number of columns
     int y_size;     //Number of rows
@@ -21,26 +21,27 @@ class aStar
     {
         int parent = -1;   //Parent's map index
         int g = INT_MAX;
+        int h = INT_MAX;
+        int f = INT_MAX;
     };
 
     unordered_map<int, bool> closedList;     //closedList of bool values for each cell
     unordered_map<int, cell> cellInfo;       //Stores info of each cell corresponding to the index of the cell
 
     priority_queue<pair<int, int>, vector<pair<int, int>>, greater<pair<int, int>>> openList;   //f-value, cell index (sorted in increasing order of f-value)
-    
 
-    int successors[2][8] = {{-1, 0, 1, -1, 1, -1, 0, 1},
-                            {-1, -1, -1, 0, 0, 1, 1, 1}};
-    
-    public:
 
-    //int goalposeX = 1;
-    //int goalposeY = 1;
+    int successors[2][8] = { {-1, 0, 1, -1, 1, -1, 0, 1},
+                            {-1, -1, -1, 0, 0, 1, 1, 1} };
+
+public:
+
+
     bool destReached = false;
     stack <int> returnPath;
 
     aStar(
-        double*	map,
+        double* map,
         int collision_thresh,
         int x_size,     //Number of columns
         int y_size,     //Number of rows
@@ -52,7 +53,7 @@ class aStar
         int targetposeY,
         int curr_time,
         double* action_ptr
-        )
+    )
     {
         this->map = map;
         this->collision_thresh = collision_thresh;
@@ -70,7 +71,7 @@ class aStar
 
     int xyToIndex(int x, int y)
     {
-        return (y-1)*x_size + (x-1);
+        return (y - 1) * x_size + (x - 1);
     }
 
     pair<int, int> indexToXY(int index)
@@ -81,14 +82,14 @@ class aStar
     void initStartCell()
     {
         cellInfo[xyToIndex(robotposeX, robotposeY)].g = 0;
+        cellInfo[xyToIndex(robotposeX, robotposeY)].h = 0;
+        cellInfo[xyToIndex(robotposeX, robotposeY)].f = 0;
         this->openList.push(make_pair(0, xyToIndex(robotposeX, robotposeY)));
     }
 
     void computePath();
-    int sIndex(int, int);
-    int sIsValid(int);
     void backTrack(pair<int, int>);
     int stepsToSeg();
-    pair<int,int> goalFinder();
+    pair<int, int> goalFinder();
     int pathCost();
 };
