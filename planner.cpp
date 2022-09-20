@@ -64,9 +64,10 @@ clock_t start;
 /* This function backtracks from the goal position to the current robot position
 while pushing all intermediate positions to a stack, so that the path from the 
 robot to the goal is in the correct sequence*/
-void aStar::backTrack()
+void aStar::backTrack(pair<int,int> goal)
 {
-
+    int goalposeX = goal.first;
+    int goalposeY = goal.second;
     int i = xyToIndex(goalposeX, goalposeY);     //Initializing to the goalIndex
 
     while(cellInfo[i].parent != xyToIndex(robotposeX,robotposeY))
@@ -154,7 +155,7 @@ void aStar::computePath()
 should aim to intercept the target at. It looks at the time elapsed since 
 running the 2D Dijkstra search and accounts for the distance covered by the
 target during this time.*/
-void aStar::goalFinder()
+pair<int,int> aStar::goalFinder()
 {
     //const int computationTime = (int)ceil(double(clock()-start)/double(CLOCKS_PER_SEC));
     //int leastCost = INT_MAX;
@@ -177,8 +178,10 @@ void aStar::goalFinder()
     //        }
     //    }
     //}
-    goalposeX = (int)target_traj[target_steps - 1];;
-    goalposeY = (int)target_traj[target_steps - 1 + target_steps];
+    int goalposeX = (int)target_traj[target_steps - 1];
+    int goalposeY = (int)target_traj[target_steps - 1 + target_steps];
+
+    return make_pair(goalposeX, goalposeY);
 }
 
 /*This is the "main" function of the planner. It outlines the flow of actions
@@ -206,12 +209,12 @@ pair<int, int> aStarSearch(
         start = clock();
         a.initStartCell();
         a.computePath();
-        a.goalFinder();
-        a.backTrack();
+        pair<int,int> goal = a.goalFinder();
+        a.backTrack(goal);
     }
 
     //If you are at the goal, stay at the same spot
-    if(robotposeX == a.goalposeX && robotposeY == a.goalposeY)
+    if(robotposeX == (int)target_traj[target_steps - 1] && robotposeY == (int)target_traj[target_steps - 1 + target_steps])
         return make_pair(robotposeX, robotposeY);
 
     int nextIndex = a.returnPath.top();

@@ -34,8 +34,8 @@ class aStar
     
     public:
 
-    int goalposeX = 1;
-    int goalposeY = 1;
+    //int goalposeX = 1;
+    //int goalposeY = 1;
     bool destReached = false;
     stack <int> returnPath;
 
@@ -87,8 +87,8 @@ class aStar
     void computePath();
     int sIndex(int, int);
     int sIsValid(int);
-    void backTrack();
+    void backTrack(pair<int, int>);
     int stepsToSeg();
-    void goalFinder();
+    pair<int,int> goalFinder();
     int pathCost();
 };
