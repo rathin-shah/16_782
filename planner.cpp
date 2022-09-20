@@ -43,7 +43,8 @@ using namespace std;
 #define NUMOFDIRS 8
 
 #define printfunc(...) { mexPrintf(__VA_ARGS__); mexEvalString("drawnow;");}
-
+int dX[NUMOFDIRS] = { -1, -1, -1,  0,  0,  1, 1, 1 };
+int dY[NUMOFDIRS] = { -1,  0,  1, -1,  1, -1, 0, 1 };
 int runCount = 0;
 clock_t start;
 
@@ -108,11 +109,15 @@ int aStar::sIndex(int s, int nodeIndex)
 /* This is the key function of the planner which implements the A* algorithm*/
 void aStar::computePath()
 {
+    int k, j;
+    int newx;
+    int newy;
     while(!this->openList.empty())
     {
         //Pop out the cell with lowest f value
         pair<int, int> node = this->openList.top();     //f-value, cell index
-
+        k = indexToXY(node.second).first;
+        j = indexToXY(node.second).second;
         //Remove it from the openList
         this->openList.pop();
 
@@ -123,33 +128,30 @@ void aStar::computePath()
         closedList[node.second] = true;     //cell index, closed
 
         //Iterate Over the successors
-        for(int i=0 ; i<8 ; i++)
+        for (int i = 0; i < NUMOFDIRS; i++)
         {
-            if (!sIsValid(sIndex(i, node.second)))
-                continue;
+            newx = k + dX[i];
+            newy = j + dY[i];
+            /*     if (!sIsValid(sIndex(i, node.second)))
+                     continue;*/
+            if ((newx >= 1 && newx <= x_size && newy >= 1 && newy <= y_size && ((int)map[GETMAPINDEX(newx, newy, x_size, y_size)] < collision_thresh))) {
 
-            if (cellInfo[sIndex(i, node.second)].g > cellInfo[node.second].g + this->map[sIndex(i, node.second)]) //If g of new > g of curr + cost of new
-            {
-                cellInfo[sIndex(i, node.second)].g = cellInfo[node.second].g + this->map[sIndex(i, node.second)];  //Set g of new = g of curr + cost of new
-                openList.push(make_pair(cellInfo[sIndex(i, node.second)].g , sIndex(i, node.second)));
-                cellInfo[sIndex(i, node.second)].parent = node.second;
+
+                if (cellInfo[xyToIndex(newx,newy)].g > cellInfo[node.second].g + this->map[xyToIndex(newx, newy)]) //If g of new > g of curr + cost of new
+                {
+                    cellInfo[xyToIndex(newx, newy)].g = cellInfo[node.second].g + this->map[xyToIndex(newx, newy)];  //Set g of new = g of curr + cost of new
+                    openList.push(make_pair(cellInfo[xyToIndex(newx, newy)].g, xyToIndex(newx, newy)));
+                    cellInfo[xyToIndex(newx, newy)].parent = node.second;
+                }
             }
+            //else {
+            //    continue;
+            //}
         }
     }
 }
 
-///* This function computes the cost of the path from the robot to the goal */
-//int aStar::pathCost()
-//{
-//    int i = xyToIndex(goalposeX, goalposeY);
-//    int cost = 0;
-//    while(i != xyToIndex(robotposeX,robotposeY))
-//    {
-//        cost += (int)map[i];
-//        i = cellInfo[i].parent;
-//    }
-//    return cost;
-//}
+
 
 /* This function identifies the section of the target's path that the robot
 should aim to intercept the target at. It looks at the time elapsed since 
@@ -157,27 +159,6 @@ running the 2D Dijkstra search and accounts for the distance covered by the
 target during this time.*/
 pair<int,int> aStar::goalFinder()
 {
-    //const int computationTime = (int)ceil(double(clock()-start)/double(CLOCKS_PER_SEC));
-    //int leastCost = INT_MAX;
-    //int strategyCost = 0;
-    //int finalGoalX, finalGoalY;
-
-    //for(int trajPoint=0 ; trajPoint < target_steps ; trajPoint ++)
-    //{
-    //    goalposeX = (int)target_traj[trajPoint];
-    //    goalposeY = (int)target_traj[trajPoint + target_steps];
-
-    //    if (stepsToSeg() + computationTime < trajPoint)   //If you get to the point on the trajectory faster than the target does
-    //    {   
-    //        strategyCost = pathCost() + (int)(trajPoint-stepsToSeg())*map[xyToIndex(goalposeX,goalposeY)];
-    //        if (strategyCost < leastCost)
-    //        {
-    //            leastCost = strategyCost;
-    //            finalGoalX = goalposeX;
-    //            finalGoalY = goalposeY;
-    //        }
-    //    }
-    //}
     int goalposeX = (int)target_traj[target_steps - 1];
     int goalposeY = (int)target_traj[target_steps - 1 + target_steps];
 
@@ -214,7 +195,7 @@ pair<int, int> aStarSearch(
     }
 
     //If you are at the goal, stay at the same spot
-    if(robotposeX == (int)target_traj[target_steps - 1] && robotposeY == (int)target_traj[target_steps - 1 + target_steps])
+    if(robotposeX == a.goalFinder().first && robotposeY == a.goalFinder().second)
         return make_pair(robotposeX, robotposeY);
 
     int nextIndex = a.returnPath.top();
