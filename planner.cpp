@@ -46,20 +46,23 @@ using namespace std;
 int dX[NUMOFDIRS] = { -1, -1, -1,  0,  0,  1, 1, 1 };
 int dY[NUMOFDIRS] = { -1,  0,  1, -1,  1, -1, 0, 1 };
 int runCount = 0;
+int goalposeX = -1;
+int goalposeY = -1;
+pair<int, int> goal(goalposeX, goalposeY);
 clock_t start;
 
 /* This function computes the number of steps of the path from the robot to the goal */
-//int aStar::stepsToSeg()
-//{
-//    int i = xyToIndex(goalposeX, goalposeY);     //Initializing to the goalIndex
-//    int steps = 0;
-//    while(i != xyToIndex(robotposeX,robotposeY))
-//    {
-//        i = cellInfo[i].parent;
-//        steps++;
-//    }
-//    return steps;
-//}
+int aStar::stepsToSeg()
+{
+    int i = xyToIndex(goalposeX, goalposeY);     //Initializing to the goalIndex
+    int steps = 0;
+    while(i != xyToIndex(robotposeX,robotposeY))
+    {
+        i = cellInfo[i].parent;
+        steps++;
+    }
+    return steps;
+}
 
 
 /* This function backtracks from the goal position to the current robot position
@@ -67,16 +70,26 @@ while pushing all intermediate positions to a stack, so that the path from the
 robot to the goal is in the correct sequence*/
 void aStar::backTrack(pair<int,int> goal)
 {
-    int goalposeX = goal.first;
-    int goalposeY = goal.second;
-    int i = xyToIndex(goalposeX, goalposeY);     //Initializing to the goalIndex
+    goalposeX = goal.first;
+    goalposeY = goal.second;
+    int n= xyToIndex(goalposeX, goalposeY);     //Initializing to the goalIndex
+    //int n = (int)map[GETMAPINDEX(goalposeX, goalposeY, x_size, y_size)];
+    int p = cellInfo[n].parent;
+    int r = xyToIndex(robotposeX, robotposeY);
 
-    while(cellInfo[i].parent != xyToIndex(robotposeX,robotposeY))
-    {
-        returnPath.push(i);
-        i = cellInfo[i].parent;
+    if (n == r) {
+        returnPath.push(n);
+        return;
     }
-    returnPath.push(i);
+    else {
+        while (cellInfo[n].parent != xyToIndex(robotposeX, robotposeY))
+        {
+            returnPath.push(n);
+            n = cellInfo[n].parent;
+        }
+        returnPath.push(n);
+    }
+
 }
 
 
@@ -161,7 +174,7 @@ void aStar::computePath()
 should aim to intercept the target at. It looks at the time elapsed since 
 running the 2D Dijkstra search and accounts for the distance covered by the
 target during this time.*/
-pair<int,int> aStar::goalFinder()
+pair<int, int> aStar::goalFinder()
 {
     int goalposeX = (int)target_traj[target_steps - 1];
     int goalposeY = (int)target_traj[target_steps - 1 + target_steps];
@@ -192,15 +205,18 @@ pair<int, int> aStarSearch(
     if (runCount == 1)
     {    
         start = clock();
+
         a.initStartCell();
         a.computePath();
-        pair<int,int> goal = a.goalFinder();
+        goal = a.goalFinder();
         a.backTrack(goal);
     }
 
     //If you are at the goal, stay at the same spot
-    if(robotposeX == a.goalFinder().first && robotposeY == a.goalFinder().second)
+    if (robotposeX == goal.first && robotposeY == goal.second)
+    {
         return make_pair(robotposeX, robotposeY);
+    }
 
     int nextIndex = a.returnPath.top();
     a.returnPath.pop();

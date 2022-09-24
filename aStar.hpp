@@ -31,8 +31,7 @@ class aStar
     priority_queue<pair<int, int>, vector<pair<int, int>>, greater<pair<int, int>>> openList;   //f-value, cell index (sorted in increasing order of f-value)
 
 
-    int successors[2][8] = { {-1, 0, 1, -1, 1, -1, 0, 1},
-                            {-1, -1, -1, 0, 0, 1, 1, 1} };
+
 
 public:
 
@@ -84,8 +83,11 @@ public:
         cellInfo[xyToIndex(robotposeX, robotposeY)].g = 0;
         cellInfo[xyToIndex(robotposeX, robotposeY)].h = 0;
         cellInfo[xyToIndex(robotposeX, robotposeY)].f = 0;
+        cellInfo[xyToIndex(robotposeX, robotposeY)].parent = xyToIndex(robotposeX, robotposeY);
         this->openList.push(make_pair(0, xyToIndex(robotposeX, robotposeY)));
     }
+
+
 
     void computePath();
     void backTrack(pair<int, int>);
