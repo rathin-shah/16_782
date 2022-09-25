@@ -51,28 +51,12 @@ int goalposeY = -1;
 pair<int, int> goal(goalposeX, goalposeY);
 clock_t start;
 
-/* This function computes the number of steps of the path from the robot to the goal */
-int aStar::stepsToSeg()
-{
-    int i = xyToIndex(goalposeX, goalposeY);     //Initializing to the goalIndex
-    int steps = 0;
-    while(i != xyToIndex(robotposeX,robotposeY))
-    {
-        i = cellInfo[i].parent;
-        steps++;
-    }
-    return steps;
-}
 
-
-/* This function backtracks from the goal position to the current robot position
-while pushing all intermediate positions to a stack, so that the path from the 
-robot to the goal is in the correct sequence*/
 void aStar::backTrack(pair<int,int> goal)
 {
     goalposeX = goal.first;
     goalposeY = goal.second;
-    int n= xyToIndex(goalposeX, goalposeY);     //Initializing to the goalIndex
+    int n= xyToIndex(goalposeX, goalposeY);     
     //int n = (int)map[GETMAPINDEX(goalposeX, goalposeY, x_size, y_size)];
     int p = cellInfo[n].parent;
     int r = xyToIndex(robotposeX, robotposeY);
@@ -93,33 +77,7 @@ void aStar::backTrack(pair<int,int> goal)
 }
 
 
-///* This function checks if the successor is not in collision and is within the
-//bounds of the map. It returns 1 if the successor is valid, and 0 if it is not. */
-//int aStar::sIsValid(int sIndex)
-//{
-//    if (map[sIndex] < collision_thresh)
-//    {
-//        if (indexToXY(sIndex).first > 1 && indexToXY(sIndex).first < x_size)
-//        {
-//            if (indexToXY(sIndex).second > 1 && indexToXY(sIndex).second < y_size)
-//                return 1;
-//        }
-//    }
-//    return 0;
-//}
-//
-///* This function returns the successor index */
-//int aStar::sIndex(int s, int nodeIndex)
-//{
-//    //get node coordinates from index
-//    pair<int, int> nodeCoordinates = indexToXY(nodeIndex);
-//    int successorX = nodeCoordinates.first + successors[0][s];
-//    int successorY = nodeCoordinates.second + successors[1][s];
-//
-//    return xyToIndex(successorX, successorY);
-//}
 
-/* This is the key function of the planner which implements the A* algorithm*/
 void aStar::computePath()
 {
     int goalposeX_h = (int)target_traj[target_steps - 1];
@@ -129,26 +87,23 @@ void aStar::computePath()
     int newy;
     while(!this->openList.empty())
     {
-        //Pop out the cell with lowest f value
-        pair<int, int> node = this->openList.top();     //f-value, cell index
+       
+        pair<int, int> node = this->openList.top();     
         k = indexToXY(node.second).first;
         j = indexToXY(node.second).second;
-        //Remove it from the openList
         this->openList.pop();
 
-        if (closedList[node.second] == true)    //If the state has already been expanded
+        if (closedList[node.second] == true)    
             continue;
 
-        //Add it to the closedList
-        closedList[node.second] = true;     //cell index, closed
+        
+        closedList[node.second] = true;     
 
-        //Iterate Over the successors
+        
         for (int i = 0; i < NUMOFDIRS; i++)
         {
             newx = k + dX[i];
             newy = j + dY[i];
-            /*     if (!sIsValid(sIndex(i, node.second)))
-                     continue;*/
             if ((newx >= 1 && newx <= x_size && newy >= 1 && newy <= y_size && ((int)map[GETMAPINDEX(newx, newy, x_size, y_size)] < collision_thresh))) {
 
                 int h_n = (int)sqrt(((newx - goalposeX_h) * (newx - goalposeX_h) + (newy - goalposeY_h) * (newy - goalposeY_h)));
@@ -170,20 +125,53 @@ void aStar::computePath()
 
 
 
-/* This function identifies the section of the target's path that the robot
-should aim to intercept the target at. It looks at the time elapsed since 
-running the 2D Dijkstra search and accounts for the distance covered by the
-target during this time.*/
-pair<int, int> aStar::goalFinder()
-{
-    int goalposeX = (int)target_traj[target_steps - 1];
-    int goalposeY = (int)target_traj[target_steps - 1 + target_steps];
+pair<int,int> aStar::goalFinder()
+{   
 
-    return make_pair(goalposeX, goalposeY);
+    int Time_till_now = (int)(clock() - start);
+    int steps_moved = (int)ceil(Time_till_now / ((CLOCKS_PER_SEC)));
+    pair<int, int> opt_goal(goalposeX, goalposeX);
+    for (int i = 0; i < target_steps; i++) {
+        int steps = 0;
+        int cost = 0;
+        goalposeX = (int)target_traj[i];
+        goalposeY = (int)target_traj[i + target_steps];
+        {
+            int p = xyToIndex(goalposeX, goalposeY);     
+               while (p != xyToIndex(robotposeX, robotposeY))
+            {
+                p = cellInfo[p].parent;
+                steps++;
+            }
+        }
+        int total_steps_taken = steps + steps_moved;
+        if (total_steps_taken < i) {
+            
+        {
+              int n = xyToIndex(goalposeX, goalposeY);
+                   
+                 while (n != xyToIndex(robotposeX, robotposeY))
+                  {
+                        cost += (int)map[n];
+                        n = cellInfo[n].parent;
+                  }
+                   
+        }
+            
+            current_cost = cost + (int)(i - steps) * map[xyToIndex(goalposeX, goalposeY)];
+            if (current_cost < opt_cost) {
+                opt_cost = current_cost;
+                opt_goal = make_pair(goalposeX, goalposeY);
+
+            }
+        }
+    }
+ 
+
+    return opt_goal ;
 }
 
-/*This is the "main" function of the planner. It outlines the flow of actions
-that the robot needs to take in order to catch the target*/
+
 pair<int, int> aStarSearch(
         double*	map,
         int collision_thresh,
@@ -212,7 +200,7 @@ pair<int, int> aStarSearch(
         a.backTrack(goal);
     }
 
-    //If you are at the goal, stay at the same spot
+
     if (robotposeX == goal.first && robotposeY == goal.second)
     {
         return make_pair(robotposeX, robotposeY);
@@ -225,8 +213,7 @@ pair<int, int> aStarSearch(
     return nextXY;
 }
 
-/*This function interfaces with the mex function through the action_ptrs to
-provide the next position that the robot should travel to*/
+
 static void planner(
         double*	map,
         int collision_thresh,

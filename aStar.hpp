@@ -36,9 +36,10 @@ class aStar
 public:
 
 
-    bool destReached = false;
+    //bool destReached = false;
     stack <int> returnPath;
-
+    int opt_cost = INT_MAX;
+    int current_cost = 0;
     aStar(
         double* map,
         int collision_thresh,
@@ -91,7 +92,6 @@ public:
 
     void computePath();
     void backTrack(pair<int, int>);
-    int stepsToSeg();
     pair<int, int> goalFinder();
-    int pathCost();
+
 };
