@@ -159,6 +159,7 @@ pair<int,int> aStar::goalFinder()
         }
             
             current_cost = cost + (int)(i - steps) * map[xyToIndex(goalposeX, goalposeY)];
+            opt_goal = make_pair(goalposeX, goalposeY)
             if (current_cost < opt_cost) {
                 opt_cost = current_cost;
                 opt_goal = make_pair(goalposeX, goalposeY);
