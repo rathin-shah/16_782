@@ -48,7 +48,7 @@ public:
 
 
     //bool destReached = false;
-    stack <int> returnPath;
+    stack <pair<int,int>> returnPath;
     int opt_cost = INT_MAX;
     int current_cost = 0;
     aStar(
