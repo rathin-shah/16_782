@@ -2,6 +2,7 @@
 
 using namespace std;
 #include <set> 
+#include <time.h>
 class aStar
 {
     double* map;
@@ -42,6 +43,7 @@ public:
     priority_queue<pair<int, vector<int>>, vector<pair<int, vector<int>>>, greater<pair<int, vector<int>>>> openList;   //f-value, cell index (sorted in increasing order of f-value)
 
     bool found_path = false;
+    clock_t start;
     //set <pair<int, vector<int>>> openList;
 
 
@@ -109,5 +111,6 @@ public:
     void computePath();
     void backTrack();
     pair<int, int> goalFinder();
+
 
 };
