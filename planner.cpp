@@ -72,8 +72,8 @@ void aStar::backTrack()
     int col = target_y;
     //int time_elapsed = (int)((clock() - start) / CLOCKS_PER_SEC);
 ;
-    int t = newt+ time_elapsed;
-int t - newt;
+  /*  int t = newt+ time_elapsed;*/
+    int t = newt;
     while (!(cellInfo[{row, col, t}].parent[0] == robotposeX
         && cellInfo[{row, col, t}].parent[1] == robotposeY && cellInfo[{row, col, t}].parent[2] == 0))
     {
