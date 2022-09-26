@@ -74,8 +74,8 @@ void aStar::backTrack()
 ;
   /*  int t = newt+ time_elapsed;*/
     int t = newt;
-    while (!(cellInfo[{row, col, t}].parent[0] == robotposeX
-        && cellInfo[{row, col, t}].parent[1] == robotposeY && cellInfo[{row, col, t}].parent[2] == 0))
+    while (!(cellInfo[{row, col, t}].parent[0] == row
+        && cellInfo[{row, col, t}].parent[1] == col && cellInfo[{row, col, t}].parent[2] == t))
     {
         
         
@@ -130,32 +130,52 @@ void aStar::computePath()
         closedList[{k, j, t}] = true;
 
         bool cl = closedList[{k, j, t}];
-        
+        //int time_elapsed = (int)((clock() - start) / CLOCKS_PER_SEC);
+        //int target_x = (int)target_traj[(curr_time + t + time_elapsed)];
+        //int target_y = (int)target_traj[(curr_time + t + time_elapsed + target_steps)];
+        //if (k == target_x && j == target_y && (curr_time + t + time_elapsed) <= target_steps) //if new pose is the goal pose at that time
+        //{
+
+
+        //    /*cellInfo[{newx, newy, newt}].parent = vector<int>{ k, j, t };*/
+        //    //mexPrintf("found_path");
+        //    found_path = true;
+        //    break;
+
+        //}
         for (int i = 0; i < NUMOFDIRS ; i++)
         {
             newx = k + dX[i];
             newy = j + dY[i];
             newt = t + dt;
             //mexPrintf("time: %i \n", newt);
-            int time_elapsed = (int)((clock() - start) / CLOCKS_PER_SEC);
-            target_x = (int)target_traj[curr_time + time_elapsed + newt];
-            target_y = (int)target_traj[curr_time + time_elapsed + newt + target_steps-1];
-            if ((newx >= 1 && newx <= x_size && newy >= 1 && newy <= y_size && ((int)map[GETMAPINDEX(newx, newy, x_size, y_size)] < collision_thresh) && (newt+time_elapsed) <=target_steps)) {
+            int time_elapsed = (int)ceil((clock() - start) / CLOCKS_PER_SEC);
+            if (curr_time + time_elapsed + newt <= target_steps) {
+                int time_step = (int)(time_elapsed + curr_time + newt);
+                target_x = target_traj[time_step];
+                target_y = (int)target_traj[time_step+target_steps];
+            }
 
-                
-                
-                
-                if (newx == target_x && newy == target_y)  //if new pose is the goal pose at that time
+            if ((newx >= 1 && newx <= x_size && newy >= 1 && newy <= y_size && ((int)map[GETMAPINDEX(newx, newy, x_size, y_size)] < collision_thresh) && (newt + time_elapsed) <= target_steps)) {
+
+                //time_elapsed = (int)((clock() - start) / CLOCKS_PER_SEC);
+                //target_x = (int)target_traj[(curr_time + newt + time_elapsed-1)];
+                //target_y = (int)target_traj[(curr_time + newt + time_elapsed + target_steps-1)];
+                if (newx == target_x && newy == target_y ) //if new pose is the goal pose at that time
                 {
 
-
+                    mexPrintf("x: %i", target_x);
+                    mexPrintf("y: %i", target_y);
                     cellInfo[{newx, newy, newt}].parent = vector<int>{ k, j, t };
-                    mexPrintf("found_path");
+                //    mexPrintf("found_path");
                     found_path = true;
                     break;
-                   
+
                 }
-                int h_n = (int)4 * (sqrt(2) * MIN(abs(newx - target_x), abs(newy - target_y)) + (MAX(abs(newx - target_x), abs(newy - target_y)) - MIN(abs(newx - target_x), abs(newy - target_y))));
+                
+                
+
+                int h_n = 2 * (sqrt(2) * MIN(abs(newx - target_x), abs(newy - target_y)) + (MAX(abs(newx - target_x), abs(newy - target_y)) - MIN(abs(newx - target_x), abs(newy - target_y))));
 
                 {
                     if (cellInfo[{newx, newy, newt}].g > cellInfo[{k, j, t}].g + this->map[xyToIndex(newx, newy)]) //If g of new > g of curr + cost of new
@@ -277,16 +297,18 @@ pair<int, int> aStarSearch(
     //}
     pair<int, int> nextXY;
 
-    if (a.returnPath.size() > 1) {
+    if (a.returnPath.size() > 0) {
         nextXY = a.returnPath.top();
-        mexPrintf("X: %i Y: %i \n", nextXY.first, nextXY.second);
+        //mexPrintf("X: %i Y: %i \n", nextXY.first, nextXY.second);
         mexPrintf("Path: %i \n", a.returnPath.size());
-        //mexPrintf("X: Y: %i %i \n", nextXY.first(), nextXY.second());
+        mexPrintf("X: Y: %i %i \n", nextXY.first, nextXY.second);
         a.returnPath.pop();
         
 
     }
     else {
+        mexPrintf("Path: %i \n", a.returnPath.size());
+        mexPrintf("X: Y: %i %i \n", robotposeX, robotposeY);
         nextXY = {robotposeX,robotposeY};
     }
     //int nextIndex = a.returnPath.top();
