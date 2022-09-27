@@ -115,7 +115,7 @@ public:
 
     void initStart2DCell()
     {
-        for (int i = 0; i < target_steps; i++) {
+        for (int i = target_steps; i < target_steps; i++) {
             cellInfo2D[xyToIndex(target_traj[i], target_traj[i + target_steps])].g = 0;
             this->openList2D.push(make_pair(0, xyToIndex(target_traj[i], target_traj[i + target_steps])));
         }

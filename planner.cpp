@@ -43,8 +43,8 @@ using namespace std;
 #define NUMOFDIRS 8
 
 #define printfunc(...) { mexPrintf(__VA_ARGS__); mexEvalString("drawnow;");}
-int dX[NUMOFDIRS + 1] = {0, -1, -1, -1,  0,  0,  1, 1, 1 };
-int dY[NUMOFDIRS + 1] = {0, -1,  0,  1, -1,  1, -1, 0, 1 };
+int dX[NUMOFDIRS + 1] = { 0, -1, -1, -1,  0,  0,  1, 1, 1 };
+int dY[NUMOFDIRS + 1] = { 0, -1,  0,  1, -1,  1, -1, 0, 1 };
 int dt = 1;
 int runCount = 0;
 int target_x = -1;
@@ -71,14 +71,14 @@ void aStar::backTrack()
     int row = target_x;
     int col = target_y;
     //int time_elapsed = (int)((clock() - start) / CLOCKS_PER_SEC);
-;
-  /*  int t = newt+ time_elapsed;*/
+    ;
+    /*  int t = newt+ time_elapsed;*/
     int t = newt;
-    while (!(cellInfo[{row, col, t}].parent[0] == row
-        && cellInfo[{row, col, t}].parent[1] == col && cellInfo[{row, col, t}].parent[2] == t))
+    while (!(cellInfo[{row, col, t}].parent[0] == robotposeX
+        && cellInfo[{row, col, t}].parent[1] == robotposeY && cellInfo[{row, col, t}].parent[2] == t))
     {
-        
-        
+
+
         returnPath.push(make_pair(row, col));
         int temp_row = cellInfo[{row, col, t}].parent[0];
         int temp_col = cellInfo[{row, col, t}].parent[1];
@@ -103,7 +103,7 @@ void aStar::backTrack()
 
 
 void aStar::compute2DPath()
-{ 
+{
     int m, n;
     int new_x, new_y;
 
@@ -141,7 +141,7 @@ void aStar::computePath()
     //int goalposeY_h = (int)target_traj[target_steps - 1 + target_steps];
     int goalposeX = (int)target_traj[target_steps - 1];
     int goalposeY = (int)target_traj[target_steps - 1 + target_steps];
-    int k,j,t;
+    int k, j, t;
     int newx;
     int newy;
     while (!this->openList.empty())
@@ -152,24 +152,23 @@ void aStar::computePath()
         j = node.second[1];
         t = node.second[2];
         //mexPrintf("time: %i \n", t);
-        int qwe_newewe = openList.size();
-        int u = cellInfo[{k, j, t}].g;
+
         //*openList.erase(openList.begin());
 
         this->openList.pop();
 
-        mexPrintf("size: %i \n", this->openList.size());
+        //mexPrintf("size: %i \n", this->openList.size());
         //mexPrintf("Map X size: %i ", x_size );
         //mexPrintf("Map Y size: %i ", y_size);
         //if (this->openList.size() > (x_size + y_size)) {
         //    break;
         //}
 
-        int qwe = openList.size();
-        if (closedList[{k,j,t}] == true)
+
+        if (closedList[{k, j, t}] == true)
             continue;
 
-        
+
         closedList[{k, j, t}] = true;
 
         bool cl = closedList[{k, j, t}];
@@ -186,17 +185,17 @@ void aStar::computePath()
         //    break;
 
         //}
-        for (int i = 0; i < NUMOFDIRS+1 ; i++)
+        for (int i = 0; i < NUMOFDIRS + 1; i++)
         {
             newx = k + dX[i];
             newy = j + dY[i];
             newt = t + dt;
             //mexPrintf("time: %i \n", newt);
-            int time_elapsed = (int)ceil((clock() - start) / CLOCKS_PER_SEC);
+            int time_elapsed = (int)((clock() - start) / CLOCKS_PER_SEC);
             if (curr_time + time_elapsed + newt <= target_steps) {
                 int time_step = (int)(time_elapsed + curr_time + newt);
                 target_x = target_traj[time_step];
-                target_y = (int)target_traj[time_step+target_steps];
+                target_y = target_traj[time_step + target_steps];
             }
 
             if ((newx >= 1 && newx <= x_size && newy >= 1 && newy <= y_size && ((int)map[GETMAPINDEX(newx, newy, x_size, y_size)] < collision_thresh) && (newt + time_elapsed) <= target_steps)) {
@@ -204,35 +203,33 @@ void aStar::computePath()
                 //time_elapsed = (int)((clock() - start) / CLOCKS_PER_SEC);
                 //target_x = (int)target_traj[(curr_time + newt + time_elapsed-1)];
                 //target_y = (int)target_traj[(curr_time + newt + time_elapsed + target_steps-1)];
-                if (newx == target_x && newy == target_y ) //if new pose is the goal pose at that time
+                if (newx == target_x && newy == target_y) //if new pose is the goal pose at that time
                 {
 
                     mexPrintf("x: %i", target_x);
                     mexPrintf("y: %i", target_y);
                     cellInfo[{newx, newy, newt}].parent = vector<int>{ k, j, t };
-                //    mexPrintf("found_path");
+                    //    mexPrintf("found_path");
                     this->found_path = true;
                     break;
 
                 }
-                
-                
 
-                int h_n = 0*(target_steps - (curr_time + time_elapsed + newt)) + (sqrt(2) * MIN(abs(newx - target_x), abs(newy - target_y)) + (MAX(abs(newx - target_x), abs(newy - target_y)) - MIN(abs(newx - target_x), abs(newy - target_y))));
+
+
+                int h_n = 0 * (target_steps - (curr_time + time_elapsed + newt)) + (sqrt(2) * MIN(abs(newx - target_x), abs(newy - target_y)) + (MAX(abs(newx - target_x), abs(newy - target_y)) - MIN(abs(newx - target_x), abs(newy - target_y))));
 
                 {
                     if (cellInfo[{newx, newy, newt}].g > cellInfo[{k, j, t}].g + this->map[xyToIndex(newx, newy)]) //If g of new > g of curr + cost of new
                     {
                         cellInfo[{newx, newy, newt}].g = cellInfo[{k, j, t}].g + this->map[xyToIndex(newx, newy)];  //Set g of new = g of curr + cost of new
-                        
-                        int old_info = cellInfo[{k, j, t}].g;
-                        int cost_m = this->map[xyToIndex(newx, newy)];
-                        int info = cellInfo[{newx, newy, newt}].g;
-                        
+
+
+
                         cellInfo[{newx, newy, newt}].h = cellInfo2D[xyToIndex(newx, newy)].g;//min(h_n,cellInfo2D[xyToIndex(newx,newy)].g);
                         cellInfo[{newx, newy, newt}].f = cellInfo[{newx, newy, newt}].g + cellInfo[{newx, newy, newt}].h;
                         openList.push(make_pair(cellInfo[{newx, newy, newt}].f, vector<int> {newx, newy, newt}));
-                        cellInfo[{newx, newy, newt}].parent = vector<int> { k, j, t };
+                        cellInfo[{newx, newy, newt}].parent = vector<int>{ k, j, t };
 
 
                     }
@@ -248,7 +245,7 @@ void aStar::computePath()
         if (this->found_path) {
             break;
         }
-        
+
     }
 }
 
@@ -303,26 +300,26 @@ void aStar::computePath()
 
 
 pair<int, int> aStarSearch(
-        double*	map,
-        int collision_thresh,
-        int x_size,
-        int y_size,
-        int robotposeX,
-        int robotposeY,
-        int target_steps,
-        double* target_traj,
-        int targetposeX,
-        int targetposeY,
-        int curr_time,
-        double* action_ptr
-        )
+    double* map,
+    int collision_thresh,
+    int x_size,
+    int y_size,
+    int robotposeX,
+    int robotposeY,
+    int target_steps,
+    double* target_traj,
+    int targetposeX,
+    int targetposeY,
+    int curr_time,
+    double* action_ptr
+)
 {
     static aStar a(map, collision_thresh, x_size, y_size, robotposeX, robotposeY, target_steps,
-            target_traj, targetposeX, targetposeY, curr_time, action_ptr); 
+        target_traj, targetposeX, targetposeY, curr_time, action_ptr);
 
 
     if (runCount == 1)
-    {    
+    {
 
 
         a.start = clock();
@@ -343,20 +340,20 @@ pair<int, int> aStarSearch(
     pair<int, int> nextXY;
     int path = (int)a.found_path;
     mexPrintf("found path :%i \n", path);
-    
+
     if (a.returnPath.size() > 0 && a.found_path) {
         nextXY = a.returnPath.top();
         //mexPrintf("X: %i Y: %i \n", nextXY.first, nextXY.second);
         //mexPrintf("Path: %i \n", a.returnPath.size());
         //mexPrintf("X: Y: %i %i \n", nextXY.first, nextXY.second);
         a.returnPath.pop();
-        
+
 
     }
     else {
         //mexPrintf("Path: %i \n", a.returnPath.size());
         //mexPrintf("X: Y: %i %i \n", robotposeX, robotposeY);
-        nextXY = {robotposeX,robotposeY};
+        nextXY = { robotposeX,robotposeY };
     }
     //int nextIndex = a.returnPath.top();
     //a.returnPath.pop();
@@ -368,21 +365,21 @@ pair<int, int> aStarSearch(
 
 
 static void planner(
-        double*	map,
-        int collision_thresh,
-        int x_size,     //Number of columns
-        int y_size,     //Number of rows
-        int robotposeX,
-        int robotposeY,
-        int target_steps,
-        double* target_traj,
-        int targetposeX,
-        int targetposeY,
-        int curr_time,
-        double* action_ptr
-        )
+    double* map,
+    int collision_thresh,
+    int x_size,     //Number of columns
+    int y_size,     //Number of rows
+    int robotposeX,
+    int robotposeY,
+    int target_steps,
+    double* target_traj,
+    int targetposeX,
+    int targetposeY,
+    int curr_time,
+    double* action_ptr
+)
 {
-    
+
     //int path = found_path;
     //mexPrintf("path bool is: %i", path);
     runCount++;
@@ -401,69 +398,70 @@ static void planner(
 // 4th is an integer C, the collision threshold for the map
 // plhs should contain output parameters (1):
 // 1st is a row vector <dx,dy> which corresponds to the action that the robot should make
-void mexFunction( int nlhs, mxArray *plhs[],
-        int nrhs, const mxArray*prhs[] )    
+void mexFunction(int nlhs, mxArray* plhs[],
+    int nrhs, const mxArray* prhs[])
 {
     /* Check for proper number of arguments */
     if (nrhs != 6) {
-        mexErrMsgIdAndTxt( "MATLAB:planner:invalidNumInputs",
-                "Six input arguments required.");
-    } else if (nlhs != 1) {
-        mexErrMsgIdAndTxt( "MATLAB:planner:maxlhs",
-                "One output argument required.");
+        mexErrMsgIdAndTxt("MATLAB:planner:invalidNumInputs",
+            "Six input arguments required.");
     }
-    
+    else if (nlhs != 1) {
+        mexErrMsgIdAndTxt("MATLAB:planner:maxlhs",
+            "One output argument required.");
+    }
+
     /* get the dimensions of the map and the map matrix itself*/
     int x_size = mxGetM(MAP_IN);
     int y_size = mxGetN(MAP_IN);
     double* map = mxGetPr(MAP_IN);
-    
+
     /* get the dimensions of the robotpose and the robotpose itself*/
     int robotpose_M = mxGetM(ROBOT_IN);
     int robotpose_N = mxGetN(ROBOT_IN);
-    if(robotpose_M != 1 || robotpose_N != 2){
-        mexErrMsgIdAndTxt( "MATLAB:planner:invalidrobotpose",
-                "robotpose vector should be 1 by 2.");
+    if (robotpose_M != 1 || robotpose_N != 2) {
+        mexErrMsgIdAndTxt("MATLAB:planner:invalidrobotpose",
+            "robotpose vector should be 1 by 2.");
     }
     double* robotposeV = mxGetPr(ROBOT_IN);
     int robotposeX = (int)robotposeV[0];
     int robotposeY = (int)robotposeV[1];
-    
+
     /* get the dimensions of the goalpose and the goalpose itself*/
     int targettraj_M = mxGetM(TARGET_TRAJ);
     int targettraj_N = mxGetN(TARGET_TRAJ);
-    
-    if(targettraj_M < 1 || targettraj_N != 2)
+
+    if (targettraj_M < 1 || targettraj_N != 2)
     {
-        mexErrMsgIdAndTxt( "MATLAB:planner:invalidtargettraj",
-                "targettraj vector should be M by 2.");
+        mexErrMsgIdAndTxt("MATLAB:planner:invalidtargettraj",
+            "targettraj vector should be M by 2.");
     }
     double* targettrajV = mxGetPr(TARGET_TRAJ);
     int target_steps = targettraj_M;
-    
+
     /* get the current position of the target*/
     int targetpose_M = mxGetM(TARGET_POS);
     int targetpose_N = mxGetN(TARGET_POS);
-    if(targetpose_M != 1 || targetpose_N != 2){
-        mexErrMsgIdAndTxt( "MATLAB:planner:invalidtargetpose",
-                "targetpose vector should be 1 by 2.");
+    if (targetpose_M != 1 || targetpose_N != 2) {
+        mexErrMsgIdAndTxt("MATLAB:planner:invalidtargetpose",
+            "targetpose vector should be 1 by 2.");
     }
     double* targetposeV = mxGetPr(TARGET_POS);
     int targetposeX = (int)targetposeV[0];
     int targetposeY = (int)targetposeV[1];
-    
+
     /* get the current timestep the target is at*/
     int curr_time = mxGetScalar(CURR_TIME);
-    
-    /* Create a matrix for the return action */ 
-    ACTION_OUT = mxCreateNumericMatrix( (mwSize)1, (mwSize)2, mxDOUBLE_CLASS, mxREAL); 
-    double* action_ptr = (double*) mxGetData(ACTION_OUT);
-    
+
+    /* Create a matrix for the return action */
+    ACTION_OUT = mxCreateNumericMatrix((mwSize)1, (mwSize)2, mxDOUBLE_CLASS, mxREAL);
+    double* action_ptr = (double*)mxGetData(ACTION_OUT);
+
     /* Get collision threshold for problem */
-    int collision_thresh = (int) mxGetScalar(COLLISION_THRESH);
-    
+    int collision_thresh = (int)mxGetScalar(COLLISION_THRESH);
+
     /* Do the actual planning in a subroutine */
     planner(map, collision_thresh, x_size, y_size, robotposeX, robotposeY, target_steps, targettrajV, targetposeX, targetposeY, curr_time, &action_ptr[0]);
     // printf("DONE PLANNING!\n");
-    return;   
+    return;
 }
