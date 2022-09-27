@@ -37,16 +37,23 @@ public:
         int f = INT_MAX;
     };
 
+
+    struct cell2D
+    {   //Parent's map index
+        int g = INT_MAX;
+    };
+
     unordered_map<array<int,3>, bool,ArrayHasher> closedList;     //closedList of bool values for each cell
+    unordered_map<int, bool> closed2DList;
     unordered_map<array<int,3>, cell, ArrayHasher> cellInfo;       //Stores info of each cell corresponding to the index of the cell
-
+    unordered_map<int, cell2D> cellInfo2D;
     priority_queue<pair<int, vector<int>>, vector<pair<int, vector<int>>>, greater<pair<int, vector<int>>>> openList;   //f-value, cell index (sorted in increasing order of f-value)
-
-    bool found_path = false;
+    priority_queue<pair<int, int>, vector<pair<int, int>>, greater<pair<int, int>>> openList2D;
+  
     clock_t start;
     //set <pair<int, vector<int>>> openList;
 
-
+    bool found_path = false;
 
 
     //bool destReached = false;
@@ -106,9 +113,17 @@ public:
         openList.push(make_pair(0,vector<int>{ robotposeX ,robotposeY , 0}));
     }
 
+    void initStart2DCell()
+    {
+        for (int i = 0; i < target_steps; i++) {
+            cellInfo2D[xyToIndex(target_traj[i], target_traj[i + target_steps])].g = 0;
+            this->openList2D.push(make_pair(0, xyToIndex(target_traj[i], target_traj[i + target_steps])));
+        }
 
+    }
 
     void computePath();
+    void compute2DPath();
     void backTrack();
     pair<int, int> goalFinder();
 

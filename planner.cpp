@@ -96,6 +96,45 @@ void aStar::backTrack()
 //
 //
 //
+
+
+
+
+
+
+void aStar::compute2DPath()
+{ 
+    int m, n;
+    int new_x, new_y;
+
+    while (!this->openList2D.empty()) {
+        pair<int, int> node2D = this->openList2D.top();
+        m = indexToXY(node2D.second).first;
+        n = indexToXY(node2D.second).second;
+        this->openList2D.pop();
+
+        if (closed2DList[node2D.second] == true)
+            continue;
+
+        closed2DList[node2D.second] = true;
+
+        for (int i = 1; i < NUMOFDIRS; i++) {
+            new_x = m + dX[i];
+            new_y = n + dY[i];
+
+            if ((new_x >= 1 && new_x <= x_size && new_y >= 1 && new_y <= y_size && ((int)map[GETMAPINDEX(new_x, new_y, x_size, y_size)] < collision_thresh))) {
+
+                //int h_n = (int)sqrt(((newx - goalposeX_h) * (newx - goalposeX_h) + (newy - goalposeY_h) * (newy - goalposeY_h)));
+                if (cellInfo2D[xyToIndex(new_x, new_y)].g > cellInfo2D[node2D.second].g + this->map[xyToIndex(new_x, new_y)]) //If g of new > g of curr + cost of new
+                {
+                    cellInfo2D[xyToIndex(new_x, new_y)].g = cellInfo2D[node2D.second].g + this->map[xyToIndex(new_x, new_y)];  //Set g of new = g of curr + cost of new
+                    openList2D.push(make_pair(cellInfo2D[xyToIndex(new_x, new_y)].g, xyToIndex(new_x, new_y)));
+                }
+            }
+
+        }
+    }
+}
 void aStar::computePath()
 {
     //int goalposeX_h = (int)target_traj[target_steps - 1];
@@ -119,8 +158,12 @@ void aStar::computePath()
 
         this->openList.pop();
 
-        //mexPrintf("size: %i \n", this->openList.size());
- 
+        mexPrintf("size: %i \n", this->openList.size());
+        //mexPrintf("Map X size: %i ", x_size );
+        //mexPrintf("Map Y size: %i ", y_size);
+        //if (this->openList.size() > (x_size + y_size)) {
+        //    break;
+        //}
 
         int qwe = openList.size();
         if (closedList[{k,j,t}] == true)
@@ -143,7 +186,7 @@ void aStar::computePath()
         //    break;
 
         //}
-        for (int i = 0; i < NUMOFDIRS ; i++)
+        for (int i = 0; i < NUMOFDIRS+1 ; i++)
         {
             newx = k + dX[i];
             newy = j + dY[i];
@@ -168,14 +211,14 @@ void aStar::computePath()
                     mexPrintf("y: %i", target_y);
                     cellInfo[{newx, newy, newt}].parent = vector<int>{ k, j, t };
                 //    mexPrintf("found_path");
-                    found_path = true;
+                    this->found_path = true;
                     break;
 
                 }
                 
                 
 
-                int h_n = 2 * (sqrt(2) * MIN(abs(newx - target_x), abs(newy - target_y)) + (MAX(abs(newx - target_x), abs(newy - target_y)) - MIN(abs(newx - target_x), abs(newy - target_y))));
+                int h_n = 0*(target_steps - (curr_time + time_elapsed + newt)) + (sqrt(2) * MIN(abs(newx - target_x), abs(newy - target_y)) + (MAX(abs(newx - target_x), abs(newy - target_y)) - MIN(abs(newx - target_x), abs(newy - target_y))));
 
                 {
                     if (cellInfo[{newx, newy, newt}].g > cellInfo[{k, j, t}].g + this->map[xyToIndex(newx, newy)]) //If g of new > g of curr + cost of new
@@ -186,7 +229,7 @@ void aStar::computePath()
                         int cost_m = this->map[xyToIndex(newx, newy)];
                         int info = cellInfo[{newx, newy, newt}].g;
                         
-                        cellInfo[{newx, newy, newt}].h =  h_n;
+                        cellInfo[{newx, newy, newt}].h = cellInfo2D[xyToIndex(newx, newy)].g;//min(h_n,cellInfo2D[xyToIndex(newx,newy)].g);
                         cellInfo[{newx, newy, newt}].f = cellInfo[{newx, newy, newt}].g + cellInfo[{newx, newy, newt}].h;
                         openList.push(make_pair(cellInfo[{newx, newy, newt}].f, vector<int> {newx, newy, newt}));
                         cellInfo[{newx, newy, newt}].parent = vector<int> { k, j, t };
@@ -202,7 +245,7 @@ void aStar::computePath()
 
         }
 
-        if (found_path) {
+        if (this->found_path) {
             break;
         }
         
@@ -277,12 +320,14 @@ pair<int, int> aStarSearch(
     static aStar a(map, collision_thresh, x_size, y_size, robotposeX, robotposeY, target_steps,
             target_traj, targetposeX, targetposeY, curr_time, action_ptr); 
 
+
     if (runCount == 1)
     {    
 
 
         a.start = clock();
-
+        a.initStart2DCell();
+        a.compute2DPath();
         a.initStartCell();
         a.computePath();
         //goal = a.goalFinder();
@@ -296,19 +341,21 @@ pair<int, int> aStarSearch(
     //    return make_pair(robotposeX, robotposeY);
     //}
     pair<int, int> nextXY;
-
-    if (a.returnPath.size() > 0) {
+    int path = (int)a.found_path;
+    mexPrintf("found path :%i \n", path);
+    
+    if (a.returnPath.size() > 0 && a.found_path) {
         nextXY = a.returnPath.top();
         //mexPrintf("X: %i Y: %i \n", nextXY.first, nextXY.second);
-        mexPrintf("Path: %i \n", a.returnPath.size());
-        mexPrintf("X: Y: %i %i \n", nextXY.first, nextXY.second);
+        //mexPrintf("Path: %i \n", a.returnPath.size());
+        //mexPrintf("X: Y: %i %i \n", nextXY.first, nextXY.second);
         a.returnPath.pop();
         
 
     }
     else {
-        mexPrintf("Path: %i \n", a.returnPath.size());
-        mexPrintf("X: Y: %i %i \n", robotposeX, robotposeY);
+        //mexPrintf("Path: %i \n", a.returnPath.size());
+        //mexPrintf("X: Y: %i %i \n", robotposeX, robotposeY);
         nextXY = {robotposeX,robotposeY};
     }
     //int nextIndex = a.returnPath.top();
@@ -335,7 +382,9 @@ static void planner(
         double* action_ptr
         )
 {
-
+    
+    //int path = found_path;
+    //mexPrintf("path bool is: %i", path);
     runCount++;
     pair<int, int> nextXY = aStarSearch(map, collision_thresh, x_size, y_size, robotposeX, robotposeY, target_steps, target_traj, targetposeX, targetposeY, curr_time, action_ptr);
     action_ptr[0] = nextXY.first;
