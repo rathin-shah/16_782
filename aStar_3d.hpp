@@ -31,7 +31,7 @@ public:
     };
     struct cell
     {
-        vector<int> parent = {-1,-1,-1};   
+        vector<int> parent = { -1,-1,-1 };
         int g = INT_MAX;
         int h = INT_MAX;
         int f = INT_MAX;
@@ -39,17 +39,17 @@ public:
 
 
     struct cell2D
-    {   
+    {
         int g = INT_MAX;
     };
 
-    unordered_map<array<int,3>, bool,ArrayHasher> closedList;     //closedList of bool values for each cell
+    unordered_map<array<int, 3>, bool, ArrayHasher> closedList;     //closedList of bool values for each cell
     unordered_map<int, bool> closed2DList;
-    unordered_map<array<int,3>, cell, ArrayHasher> cellInfo;       //Stores info of each cell corresponding to the index of the cell
+    unordered_map<array<int, 3>, cell, ArrayHasher> cellInfo;       //Stores info of each cell corresponding to the index of the cell
     unordered_map<int, cell2D> cellInfo2D;
     priority_queue<pair<int, vector<int>>, vector<pair<int, vector<int>>>, greater<pair<int, vector<int>>>> openList;   //f-value, cell index (sorted in increasing order of f-value)
     priority_queue<pair<int, int>, vector<pair<int, int>>, greater<pair<int, int>>> openList2D;
-  
+
     clock_t start;
     //set <pair<int, vector<int>>> openList;
 
@@ -57,7 +57,7 @@ public:
 
 
     //bool destReached = false;
-    queue <pair<int,int>> returnPath;
+    queue <pair<int, int>> returnPath;
     int opt_cost = INT_MAX;
     int current_cost = 0;
     aStar(
@@ -112,11 +112,11 @@ public:
         //int par = cellInfo[{robotposeX, robotposeY, 0}].parent[0];
         //openList.push(make_pair(0,vector<int>{ robotposeX ,robotposeY , 0}));
         for (int i = 1; i <= target_steps; i++) {
-            cellInfo[{(int)target_traj[i-1], (int)target_traj[i-1 + target_steps], i}].g = 0;
-            cellInfo[{(int)target_traj[i-1], (int)target_traj[i-1 + target_steps], i}].f = 0;
-            cellInfo[{(int)target_traj[i-1], (int)target_traj[i-1 + target_steps], i}].h = 0;
-            cellInfo[{(int)target_traj[i - 1], (int)target_traj[i - 1 + target_steps], i}].parent = vector<int>{0,0,0};
-            this->openList.push(make_pair(0, vector<int> {(int)target_traj[i-1], (int)target_traj[i-1 + target_steps], i}));
+            cellInfo[{(int)target_traj[i - 1], (int)target_traj[i - 1 + target_steps], i}].g = 0;
+            cellInfo[{(int)target_traj[i - 1], (int)target_traj[i - 1 + target_steps], i}].f = 0;
+            cellInfo[{(int)target_traj[i - 1], (int)target_traj[i - 1 + target_steps], i}].h = 0;
+            cellInfo[{(int)target_traj[i - 1], (int)target_traj[i - 1 + target_steps], i}].parent = vector<int>{ 0,0,0 };
+            this->openList.push(make_pair(0, vector<int> {(int)target_traj[i - 1], (int)target_traj[i - 1 + target_steps], i}));
         }
 
 

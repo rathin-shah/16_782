@@ -72,7 +72,7 @@ void aStar::backTrack(int t_n)
     int row = robotposeX;
     int col = robotposeY;
     //int time_elapsed = (int)((clock() - start) / CLOCKS_PER_SEC);
-    
+
 
     int t_p = t_n;
     while ((cellInfo[{row, col, t_p}].parent[0] != 0
@@ -150,12 +150,12 @@ void aStar::computePath()
     {
 
 
-       pair<int, vector<int>> node = this->openList.top();
-       k = node.second[0];
-       j = node.second[1];
-       t = node.second[2];
-       //mexPrintf("%i %i %i \n", k, j, t);
-       this->openList.pop();
+        pair<int, vector<int>> node = this->openList.top();
+        k = node.second[0];
+        j = node.second[1];
+        t = node.second[2];
+        //mexPrintf("%i %i %i \n", k, j, t);
+        this->openList.pop();
 
         //mexPrintf("size: %i \n", this->openList.size());
         //mexPrintf("Map X size: %i ", x_size );
@@ -202,11 +202,11 @@ void aStar::computePath()
             //}
 
 
-            time_elapsed = 5+(int)(((clock() - start) / CLOCKS_PER_SEC));
+            time_elapsed = (int)((((clock() - start) / CLOCKS_PER_SEC)));
 
-            if ((newx >= 1 && newx <= x_size && newy >= 1 && newy <= y_size && ((int)map[GETMAPINDEX(newx, newy, x_size, y_size)] < collision_thresh) ) && (newt - time_elapsed)>=0) {
+            if ((newx >= 1 && newx <= x_size && newy >= 1 && newy <= y_size && ((int)map[GETMAPINDEX(newx, newy, x_size, y_size)] < collision_thresh)) && (newt - time_elapsed) >= 0) {
 
-                
+
                 //target_x = (int)target_traj[(curr_time + newt + time_elapsed-1)];
                 //target_y = (int)target_traj[(curr_time + newt + time_elapsed + target_steps-1)];
                 //if (newx== robotposeX && newy== robotposeY && ((newt-time_elapsed)>0))/* || (newx==target_traj[target_steps-1] && newy==target_traj[2*target_steps-1])*/ //if new pose is the goal pose at that time
@@ -224,18 +224,20 @@ void aStar::computePath()
                 //    break;
 
                 //}
+                time_elapsed = 1 + (int)((((clock() - start) / CLOCKS_PER_SEC)));
                 if (newx == robotposeX && newy == robotposeY && (newt) == time_elapsed) {
-                    mexPrintf("Found Path");
-                    mexPrintf("Time: %i \n", time_elapsed);
-                    mexPrintf("Time: %i \n", target_steps);
+                    //mexPrintf("Found Path");
+                    //mexPrintf("Time: %i \n", time_elapsed);
+                    //mexPrintf("Time: %i \n", target_steps);
                     cellInfo[{newx, newy, newt}].parent = vector<int>{ k, j, t };
-                    backTrack(time_elapsed);
                     this->found_path = true;
+                    backTrack(time_elapsed);
+
                     break;
                     return;
                 }
 
-                
+
                 //int h_n = 0 * (target_steps - (curr_time + time_elapsed + newt)) + (sqrt(2) * MIN(abs(newx - target_x), abs(newy - target_y)) + (MAX(abs(newx - target_x), abs(newy - target_y)) - MIN(abs(newx - target_x), abs(newy - target_y))));
 
                 {
@@ -245,7 +247,7 @@ void aStar::computePath()
 
 
 
-                        cellInfo[{newx, newy, newt}].h = 100*cellInfo2D[xyToIndex(newx, newy)].g;  //min(h_n,cellInfo2D[xyToIndex(newx,newy)].g);
+                        cellInfo[{newx, newy, newt}].h = 50 * cellInfo2D[xyToIndex(newx, newy)].g;  //min(h_n,cellInfo2D[xyToIndex(newx,newy)].g);
                         cellInfo[{newx, newy, newt}].f = cellInfo[{newx, newy, newt}].g + cellInfo[{newx, newy, newt}].h;
                         openList.push(make_pair(cellInfo[{newx, newy, newt}].f, vector<int> {newx, newy, newt}));
                         cellInfo[{newx, newy, newt}].parent = vector<int>{ k, j, t };
