@@ -415,7 +415,7 @@ static void RRTplan(
 	bool goalfound = false;
     double* random_config = new double[numofDOFs*sizeof(double)];
     // std::srand(10);
-	double epsilon = 0.8;
+	double epsilon =1;
 	while(goalfound == false and k<80000){
 		random_config = RandomConfig(map, numofDOFs, x_size, y_size);
         int n_id = rrtplan.nearest_id(random_config);
@@ -426,6 +426,8 @@ static void RRTplan(
 			rrtplan.vertices.push_back(extend_angles);
 			
 			rrtplan.edges[new_id] =n_id ;
+
+
 			extend_angles = extend(new_id,armgoal_anglesV_rad, map, numofDOFs, x_size, y_size, epsilon,rrtplan.vertices);
         //    Change the goal condition and try goal region
 		   if(angles_equal(extend_angles,armgoal_anglesV_rad,numofDOFs)){
@@ -435,6 +437,7 @@ static void RRTplan(
 				rrtplan.edges[g_id] =new_id ;
 				goalfound = true;
 				cout<<"GOAL FOUND"<<endl;
+				break;
 
 
 			}
@@ -465,6 +468,134 @@ static void RRTplan(
     }
   }
 }
+
+static void RRTConnectplan(
+			double* map,
+			int x_size,
+			int y_size,
+			double* armstart_anglesV_rad,
+			double* armgoal_anglesV_rad,
+            int numofDOFs,
+            double*** plan,
+            int* planlength	
+)
+{
+	*plan = NULL;
+	*planlength = 0;
+	RRTplan_C rrt_connect_start;
+	RRTplan_C rrt_connect_goal;
+	rrt_connect_start.RRTplan_init(numofDOFs,armstart_anglesV_rad);
+	rrt_connect_goal.RRTplan_init(numofDOFs,armgoal_anglesV_rad);
+	int k = 0;
+    
+	bool goalfound = false;
+    double* random_config = new double[numofDOFs*sizeof(double)];
+	// Remember to remove the seed
+    std::srand(10);
+	double epsilon = 0.5;
+    
+	bool swap = true;
+	while(goalfound == false and k<80000){
+        k++;
+		if(swap){
+		random_config = RandomConfig(map, numofDOFs, x_size, y_size);
+        int n_id = rrt_connect_start.nearest_id(random_config);
+		double* extend_angles = extend(n_id,random_config, map, numofDOFs, x_size, y_size, epsilon,rrt_connect_start.vertices);
+		if(!extend_angles){
+			continue;
+		}
+		int new_id = rrt_connect_start.vertices.size();
+		rrt_connect_start.vertices.push_back(extend_angles);	
+		rrt_connect_start.edges[new_id] =n_id ;
+
+		int g_id = rrt_connect_goal.nearest_id(extend_angles);
+		double* goal_extend_angles = extend(g_id,extend_angles, map, numofDOFs, x_size, y_size, epsilon,rrt_connect_goal.vertices);
+        if(!goal_extend_angles){
+			continue;
+		}
+			int goal_new_id = rrt_connect_goal.vertices.size();
+			rrt_connect_goal.vertices.push_back(goal_extend_angles);	
+			rrt_connect_goal.edges[goal_new_id] =g_id ;
+			if(angles_equal(goal_extend_angles,extend_angles,numofDOFs)){
+				goalfound = true;
+				break;
+			}
+		}
+
+		else{
+		random_config = RandomConfig(map, numofDOFs, x_size, y_size);
+        int gn_id = rrt_connect_goal.nearest_id(random_config);
+		double* g_extend_angles = extend(gn_id,random_config, map, numofDOFs, x_size, y_size, epsilon,rrt_connect_goal.vertices);
+        
+		if(!g_extend_angles){
+			continue;
+		}
+		int gnew_id = rrt_connect_goal.vertices.size();
+		rrt_connect_goal.vertices.push_back(g_extend_angles);	
+		rrt_connect_goal.edges[gnew_id] =gn_id ;
+
+		int s_id = rrt_connect_start.nearest_id(g_extend_angles);
+		double* s_extend_angles = extend(s_id,g_extend_angles, map, numofDOFs, x_size, y_size, epsilon,rrt_connect_start.vertices);
+        if(!s_extend_angles){
+			continue;
+		}
+		int s_new_id = rrt_connect_start.vertices.size();
+		rrt_connect_start.vertices.push_back(s_extend_angles);	
+		rrt_connect_start.edges[s_new_id] =s_id ;
+		if(angles_equal(s_extend_angles,g_extend_angles,numofDOFs)){
+			goalfound = true;
+				break;
+		}				
+		}
+        
+		swap = !swap;
+
+
+
+
+	}	
+   if(goalfound)
+  {
+    vector<int> tree;
+    int next_id = rrt_connect_start.vertices.size()-1;
+    while(next_id!=0)
+    {
+      tree.insert(tree.begin(),next_id);
+      next_id = rrt_connect_start.edges[next_id];
+    }
+    tree.insert(tree.begin(),0);
+
+    int start_plan_size = tree.size();
+
+    next_id = rrt_connect_goal.vertices.size()-1;;
+
+    while(next_id!=0)
+    {
+      next_id = rrt_connect_goal.edges[next_id];
+      tree.push_back(next_id);
+    }
+
+    *planlength = tree.size();
+
+    *plan = (double**) malloc(tree.size()*sizeof(double*));
+
+    for(int i=0; i<tree.size(); i++)
+    {
+      (*plan)[i] = (double*) malloc(numofDOFs*sizeof(double));
+      if(i<start_plan_size)
+        memcpy((*plan)[i], rrt_connect_start.vertices[tree[i]], numofDOFs*sizeof(double));
+      else
+        memcpy((*plan)[i], rrt_connect_goal.vertices[tree[i]], numofDOFs*sizeof(double));
+    }    
+
+  }
+    
+
+
+
+
+}
+
 
 static void planner(
 			double* map,
@@ -544,7 +675,7 @@ int main(int argc, char** argv) {
 	double** plan = NULL;
 	int planlength = 0;
 	RRTplan(map, x_size, y_size, startPos, goalPos, numOfDOFs, &plan, &planlength);
-
+    // RRTConnectplan(map, x_size, y_size, startPos, goalPos, numOfDOFs, &plan, &planlength);
 	//// Feel free to modify anything above.
 	//// If you modify something below, please change it back afterwards as my 
 	//// grading script will not work and you will recieve a 0.
