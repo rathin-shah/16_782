@@ -16,6 +16,7 @@ public:
 
 	vector<double* > vertices;
 	unordered_map<int,int> edges;
+    unordered_map<int,double> cost;
 	int numofDOFs;
 
 	void RRTplan_init(int nofDOFs, double* armstart_anglesV_rad)

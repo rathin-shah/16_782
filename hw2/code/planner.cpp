@@ -289,14 +289,15 @@ int IsValidArmConfiguration(double* angles, int numofDOFs, double*	map,
 double* RandomConfig(double *map, int numofDOFs, int x_size, int y_size){
 	
 	double* ans = new double[numofDOFs*sizeof(double)];
-
-	while (true)
+    bool flag = true;
+	while (flag)
 	{
 		for(int i = 0;i<numofDOFs;i++){
 			double j = (double)(rand()%360)/360 * 2 * PI;
 			ans[i] = j;
 			}
 		if(IsValidArmConfiguration(ans,numofDOFs,map,x_size,y_size)){
+			flag = false;
 			return ans;
 			break;
 		}
@@ -345,7 +346,7 @@ double* extend(int n_id,double* random_config, double* map, int numofDOFs, int x
         if(distance < fabs(start_angles[j] - random_config[j]))
             distance = fabs(start_angles[j] - random_config[j]);
     }
-    int numofsamples = (int)(distance/(PI/20));
+    int numofsamples = (int)(distance/(PI/40));
 
     double* tmp_angles = new double[numofDOFs*sizeof(double)];
     double* saved_angles = NULL;
@@ -414,8 +415,8 @@ static void RRTplan(
     
 	bool goalfound = false;
     double* random_config = new double[numofDOFs*sizeof(double)];
-    // std::srand(10);
 	double epsilon =1;
+	srand (time(NULL));
 	while(goalfound == false and k<80000){
 		random_config = RandomConfig(map, numofDOFs, x_size, y_size);
         int n_id = rrtplan.nearest_id(random_config);
@@ -467,6 +468,7 @@ static void RRTplan(
       memcpy((*plan)[i], rrtplan.vertices[path[i]], numofDOFs*sizeof(double));
     }
   }
+  cout<<k<<endl;
 }
 
 static void RRTConnectplan(
@@ -487,14 +489,13 @@ static void RRTConnectplan(
 	rrt_connect_start.RRTplan_init(numofDOFs,armstart_anglesV_rad);
 	rrt_connect_goal.RRTplan_init(numofDOFs,armgoal_anglesV_rad);
 	int k = 0;
-    
 	bool goalfound = false;
     double* random_config = new double[numofDOFs*sizeof(double)];
 	// Remember to remove the seed
-    std::srand(10);
-	double epsilon = 0.5;
-    
+    // std::srand(10);
+	double epsilon = 0.2;
 	bool swap = true;
+	srand (time(NULL));
 	while(goalfound == false and k<80000){
         k++;
 		if(swap){
@@ -556,14 +557,14 @@ static void RRTConnectplan(
 	}	
    if(goalfound)
   {
-    vector<int> tree;
+    deque<int> tree;
     int next_id = rrt_connect_start.vertices.size()-1;
     while(next_id!=0)
     {
-      tree.insert(tree.begin(),next_id);
+      tree.push_front(next_id);
       next_id = rrt_connect_start.edges[next_id];
     }
-    tree.insert(tree.begin(),0);
+    tree.push_front(0);
 
     int start_plan_size = tree.size();
 
@@ -589,12 +590,121 @@ static void RRTConnectplan(
     }    
 
   }
+
+  cout<<k<<endl;
     
 
 
 
 
 }
+
+static void RRTstarplan(
+			double* map,
+			int x_size,
+			int y_size,
+			double* armstart_anglesV_rad,
+			double* armgoal_anglesV_rad,
+            int numofDOFs,
+            double*** plan,
+            int* planlength	
+){
+  *plan = NULL;
+  *planlength = 0;
+   int k = 0;
+   srand(time(NULL));
+   
+   RRTplan_C rrtstar;
+   bool goalfound = false;
+   double* random_config = new double[numofDOFs*sizeof(double)];
+   rrtstar.RRTplan_init(numofDOFs,armstart_anglesV_rad);
+   double epsilon = 1;
+   double r = 1.5 * epsilon;
+   rrtstar.cost[0] = 0;
+   int goal_id;
+   while(goalfound == false and k<80000){
+	k++;
+
+	random_config = RandomConfig(map,numofDOFs,x_size,y_size);
+	int n_id = rrtstar.nearest_id(random_config);
+	double* extend_angles = extend(n_id,random_config, map, numofDOFs, x_size, y_size, epsilon,rrtstar.vertices);
+	if(extend_angles){
+			int new_id = rrtstar.vertices.size();
+			rrtstar.vertices.push_back(extend_angles);
+			vector<int> extend_nearest;
+			double min_cost = rrtstar.cost[n_id] + dist_angles(rrtstar.vertices[n_id],rrtstar.vertices[new_id],numofDOFs);
+			int parent = n_id;
+
+			for(int i = 0; i<rrtstar.vertices.size()-1;i++){
+				double dist_cal = dist_angles(rrtstar.vertices[new_id],rrtstar.vertices[i],numofDOFs);
+				if(dist_cal<r){
+					extend_nearest.push_back(i);
+					if((rrtstar.cost[i]+dist_cal)<min_cost){
+						min_cost = rrtstar.cost[i]+dist_cal;
+						parent = i;
+					}
+				}
+			}
+
+			rrtstar.cost[new_id]=min_cost;
+			rrtstar.edges[new_id] = parent;
+
+			for(int near:extend_nearest){
+				if(rrtstar.cost[near]>rrtstar.cost[new_id]+dist_angles(rrtstar.vertices[new_id],rrtstar.vertices[near],numofDOFs)){
+					rrtstar.cost[near]=rrtstar.cost[new_id]+dist_angles(rrtstar.vertices[new_id],rrtstar.vertices[near],numofDOFs);
+					rrtstar.edges[near] = new_id;
+				}
+			}
+
+			if(!goalfound){
+				double* extend_angles = extend(new_id,armgoal_anglesV_rad,map,numofDOFs,x_size,y_size,epsilon,rrtstar.vertices);
+				if(angles_equal(extend_angles,armgoal_anglesV_rad,numofDOFs)){
+
+					goal_id = rrtstar.vertices.size();
+					rrtstar.vertices.push_back(armgoal_anglesV_rad);
+					rrtstar.edges[goal_id] = new_id;
+					rrtstar.cost[goal_id] = rrtstar.cost[new_id] + dist_angles(rrtstar.vertices[new_id],rrtstar.vertices[goal_id],numofDOFs);
+					cout<<"Goal in star Found"<<endl;
+					goalfound = true;
+					break;
+
+				}
+
+				}
+			}
+
+
+
+   }
+
+   if(goalfound){
+    vector<int> path;
+    int next_id = rrtstar.vertices.size()-1;
+    while(next_id!=0)
+    {
+      path.insert(path.begin(),next_id);
+      next_id = rrtstar.edges[next_id];
+    }
+    path.insert(path.begin(),0);
+
+    *planlength = path.size();
+
+    *plan = (double**) malloc(path.size()*sizeof(double*));
+
+    for(int i=0; i<path.size(); i++)
+    {
+      (*plan)[i] = (double*) malloc(numofDOFs*sizeof(double));
+      memcpy((*plan)[i], rrtstar.vertices[path[i]], numofDOFs*sizeof(double));
+    }
+  }
+  cout<<k<<endl;
+	
+
+   
+
+
+}
+
 
 
 static void planner(
@@ -674,8 +784,10 @@ int main(int argc, char** argv) {
 
 	double** plan = NULL;
 	int planlength = 0;
-	RRTplan(map, x_size, y_size, startPos, goalPos, numOfDOFs, &plan, &planlength);
+	// RRTplan(map, x_size, y_size, startPos, goalPos, numOfDOFs, &plan, &planlength);
     // RRTConnectplan(map, x_size, y_size, startPos, goalPos, numOfDOFs, &plan, &planlength);
+	// planner(map, x_size, y_size, startPos, goalPos, numOfDOFs, &plan, &planlength);
+	RRTstarplan(map, x_size, y_size, startPos, goalPos, numOfDOFs, &plan, &planlength);
 	//// Feel free to modify anything above.
 	//// If you modify something below, please change it back afterwards as my 
 	//// grading script will not work and you will recieve a 0.
