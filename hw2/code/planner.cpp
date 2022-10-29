@@ -767,7 +767,7 @@ static void PRMplan_f(
 	double min_dist_goal =std::numeric_limits<double>::max() ;
 	double radius = 1.5;
 	int min_dist_id = -1;
-
+    srand(time(NULL));
 	while (i < num_of_samples)
 	{
 		i++;
@@ -885,28 +885,27 @@ static void PRMplan_f(
   }
 
 
-  if(goalfound)
-  {
-	// cout<<"SOHAIL-If you are checking this, Ask Bubbla out for a date. Rishi if it is you, convey it to Sohail"<<endl;
-    vector<int> path;
-    int next_id = goal_ind;
-    while(next_id!=0)
-    {
-      path.insert(path.begin(),next_id);
-      next_id = parent[next_id];
-    }
-    path.insert(path.begin(),0);
+	if (goalfound)
+	{
+		vector<int> path;
+		int next_id = prmplan.vertices.size() - 1;
+		while (next_id != 0)
+		{
+			path.insert(path.begin(), next_id);
+			next_id = parent[next_id];
+		}
+		path.insert(path.begin(), 0);
 
-    *planlength = path.size();
+		*planlength = path.size();
 
-    *plan = (double**) malloc(path.size()*sizeof(double*));
+		*plan = (double **)malloc(path.size() * sizeof(double *));
 
-    for(int i=0; i<path.size(); i++)
-    {
-      (*plan)[i] = (double*) malloc(numofDOFs*sizeof(double));
-      memcpy((*plan)[i], prmplan.GetVertice(path[i]), numofDOFs*sizeof(double));
-    }
-  }
+		for (int i = 0; i < path.size(); i++)
+		{
+			(*plan)[i] = (double *)malloc(numofDOFs * sizeof(double));
+			memcpy((*plan)[i], prmplan.vertices[path[i]], numofDOFs * sizeof(double));
+		}
+	}
 }
 
 static void planner(
