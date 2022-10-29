@@ -64,7 +64,7 @@ using std::string;
 using std::tie;
 using std::tuple;
 using std::vector;
-
+bool valid_config = false;
 /// @brief
 /// @param filepath
 /// @return map, x_size, y_size
@@ -318,7 +318,6 @@ int IsValidArmConfiguration(double *angles, int numofDOFs, double *map,
 
 double *RandomConfig(double *map, int numofDOFs, int x_size, int y_size)
 {
-
 	double *ans = new double[numofDOFs * sizeof(double)];
 	bool flag = true;
 	while (flag)
@@ -331,11 +330,12 @@ double *RandomConfig(double *map, int numofDOFs, int x_size, int y_size)
 		if (IsValidArmConfiguration(ans, numofDOFs, map, x_size, y_size))
 		{
 			flag = false;
+			valid_config = true;
 			return ans;
 			break;
 		}
 	}
-
+    valid_config = false;
 	return ans;
 }
 double dist_angles(double *start, double *end, int numofDOFs)
@@ -763,15 +763,18 @@ static void PRMplan_f(
 	int num_of_samples = 10000;
 	int i = 0;
 	double *random_config = new double[numofDOFs * sizeof(double)];
-	double min_dist_start = 0;
+	double min_dist_start = std::numeric_limits<double>::max() ;;
 	double min_dist_goal =std::numeric_limits<double>::max() ;
 	double radius = 1.5;
 	int min_dist_id = -1;
+    int min_start_dist_id = -1;
     srand(time(NULL));
 	while (i < num_of_samples)
 	{
 		i++;
 		random_config = RandomConfig(map, numofDOFs, x_size, y_size);
+		// cout<<valid_config<<endl;
+		{
 		int ind = prmplan.vertices.size();
         prmplan.g[ind] = std::numeric_limits<double>::max();
 		prmplan.vertices.push_back(random_config);
@@ -792,7 +795,16 @@ static void PRMplan_f(
 					if(min_dist<min_dist_goal){
 						min_dist_goal = min_dist;
                         min_dist_id = ind;
+						
 					}}
+					
+					if(extend(ind,armstart_anglesV_rad,map,numofDOFs,x_size,y_size,std::numeric_limits<double>::max(),prmplan.vertices)!=NULL)
+					{double min_dist_s= dist_angles(random_config,armstart_anglesV_rad,numofDOFs);
+					if(min_dist_s<min_dist_start){
+						min_dist_start = min_dist_s;
+                        min_start_dist_id = ind;
+					}}
+					
 					prmplan.edges[k].push_back(ind);
 					prmplan.edges[ind].push_back(k);
 
@@ -804,6 +816,23 @@ static void PRMplan_f(
 				}
 			}
 		}
+
+		}
+
+	}
+	// cout<<"Goal Node"<<min_dist_id<<endl;
+	// cout<<"Start Node"<<min_start_dist_id<<endl;
+    int start_ind = -2;
+    double* start_angle_add = extend(min_start_dist_id,armstart_anglesV_rad,map,numofDOFs,x_size,y_size,std::numeric_limits<double>::max(), prmplan.vertices);
+	if(angles_equal(start_angle_add, armstart_anglesV_rad, numofDOFs)){
+ 		start_ind = prmplan.vertices.size();
+
+		prmplan.vertices.push_back(armstart_anglesV_rad);
+		vector<int> t;
+		prmplan.edges.push_back(t);   
+		prmplan.edges[start_ind].push_back(min_start_dist_id);
+		prmplan.edges[min_start_dist_id].push_back(start_ind);
+
 	}
     int goal_ind = -2;
     double* goal_angle_add = extend(min_dist_id,armgoal_anglesV_rad,map,numofDOFs,x_size,y_size,std::numeric_limits<double>::max(), prmplan.vertices);
@@ -818,7 +847,7 @@ static void PRMplan_f(
 
 	}
 
-
+//   cout<<valid_c<<endl;
   unordered_set<int> CloseSet;
   priority_queue<pair<int, int>, vector<pair<int, int>>, greater<pair<int, int>>> openSet; 
   unordered_map<int, int> parent;
@@ -887,6 +916,8 @@ static void PRMplan_f(
 
 	if (goalfound)
 	{
+		cout<<"number of vertices"<<prmplan.vertices.size()<<endl;
+		
 		vector<int> path;
 		int next_id = prmplan.vertices.size() - 1;
 		while (next_id != 0)
