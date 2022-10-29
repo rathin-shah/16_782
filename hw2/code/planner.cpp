@@ -1022,10 +1022,29 @@ int main(int argc, char **argv)
 
 	double **plan = NULL;
 	int planlength = 0;
-	// RRTplan(map, x_size, y_size, startPos, goalPos, numOfDOFs, &plan, &planlength);
-	// RRTConnectplan(map, x_size, y_size, startPos, goalPos, numOfDOFs, &plan, &planlength);
-	// planner(map, x_size, y_size, startPos, goalPos, numOfDOFs, &plan, &planlength);
-	RRTstarplan(map, x_size, y_size, startPos, goalPos, numOfDOFs, &plan, &planlength);
+
+	switch (whichPlanner)
+	{
+	case  RRT:
+		RRTplan(map, x_size, y_size, startPos, goalPos, numOfDOFs, &plan, &planlength);
+		break;
+	case  RRTCONNECT:
+		RRTConnectplan(map, x_size, y_size, startPos, goalPos, numOfDOFs, &plan, &planlength);
+		break;	
+	case  RRTSTAR:
+		RRTstarplan(map, x_size, y_size, startPos, goalPos, numOfDOFs, &plan, &planlength);
+		break;
+	case  PRM:
+		PRMplan_f(map, x_size, y_size, startPos, goalPos, numOfDOFs, &plan, &planlength);
+		break;	
+	default:
+		planner(map, x_size, y_size, startPos, goalPos, numOfDOFs, &plan, &planlength);
+		break;
+	}
+	// 
+	// 
+	// 
+	// RRTstarplan(map, x_size, y_size, startPos, goalPos, numOfDOFs, &plan, &planlength);
 	// PRMplan_f(map, x_size, y_size, startPos, goalPos, numOfDOFs, &plan, &planlength);
 	//// Feel free to modify anything above.
 	//// If you modify something below, please change it back afterwards as my
