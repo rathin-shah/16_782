@@ -9,7 +9,7 @@
 #include <array>
 #include <algorithm>
 #include <unordered_set>
-
+#include <queue>
 #include <tuple>
 #include <string>
 #include <stdexcept>
@@ -335,6 +335,8 @@ double *RandomConfig(double *map, int numofDOFs, int x_size, int y_size)
 			break;
 		}
 	}
+
+	return ans;
 }
 double dist_angles(double *start, double *end, int numofDOFs)
 {
@@ -758,18 +760,20 @@ static void PRMplan_f(
 	int start_id = 0;
 	vector<int> t;
 	prmplan.edges.push_back(t);	
-	int num_of_samples = 5000;
+	int num_of_samples = 10000;
 	int i = 0;
 	double *random_config = new double[numofDOFs * sizeof(double)];
 	double min_dist_start = 0;
-	double min_dist_goal = 0;
+	double min_dist_goal =std::numeric_limits<double>::max() ;
 	double radius = 1.5;
+	int min_dist_id = -1;
 
 	while (i < num_of_samples)
 	{
 		i++;
 		random_config = RandomConfig(map, numofDOFs, x_size, y_size);
 		int ind = prmplan.vertices.size();
+        prmplan.g[ind] = std::numeric_limits<double>::max();
 		prmplan.vertices.push_back(random_config);
 		vector<int> t;
 		prmplan.edges.push_back(t);
@@ -782,8 +786,16 @@ static void PRMplan_f(
 				double *extendangles = extend(k, random_config, map, numofDOFs, x_size, y_size, std::numeric_limits<double>::max(), prmplan.vertices);
 				if (angles_equal(extendangles, random_config, numofDOFs))
 				{
+                    
+					if(extend(ind,armgoal_anglesV_rad,map,numofDOFs,x_size,y_size,std::numeric_limits<double>::max(),prmplan.vertices)!=NULL)
+					{double min_dist = dist_angles(random_config,armgoal_anglesV_rad,numofDOFs);
+					if(min_dist<min_dist_goal){
+						min_dist_goal = min_dist;
+                        min_dist_id = ind;
+					}}
 					prmplan.edges[k].push_back(ind);
 					prmplan.edges[ind].push_back(k);
+
 					number_of_comp++;
 					if (number_of_comp > 10)
 					{
@@ -793,19 +805,33 @@ static void PRMplan_f(
 			}
 		}
 	}
+    int goal_ind = -2;
+    double* goal_angle_add = extend(min_dist_id,armgoal_anglesV_rad,map,numofDOFs,x_size,y_size,std::numeric_limits<double>::max(), prmplan.vertices);
+	if(angles_equal(goal_angle_add, armgoal_anglesV_rad, numofDOFs)){
+ 		goal_ind = prmplan.vertices.size();
+
+		prmplan.vertices.push_back(armgoal_anglesV_rad);
+		vector<int> t;
+		prmplan.edges.push_back(t);   
+		prmplan.edges[goal_ind].push_back(min_dist_id);
+		prmplan.edges[min_dist_id].push_back(goal_ind);
+
+	}
+
+
   unordered_set<int> CloseSet;
-  unordered_set<int> OpenSet;
+  priority_queue<pair<int, int>, vector<pair<int, int>>, greater<pair<int, int>>> openSet; 
   unordered_map<int, int> parent;
 
-  bool found = false;
-  OpenSet.insert(0);
-  prmplan.g[0] = 0;
-
+  bool goalfound = false;
+//   prmplan.g[0] = 0;
+  prmplan.f[0] = 0;
+  openSet.push(make_pair(prmplan.f[0], 0));
   int goal_id = 1;
 
   int num_expanded = 0;
 
-  while(!OpenSet.empty() && !found)
+  while(!openSet.empty() && !goalfound)
   {
     unordered_set<int>::iterator itr;
     unordered_set<int>::iterator close_index;
@@ -813,59 +839,57 @@ static void PRMplan_f(
 
     num_expanded++;
 
-    for(itr=OpenSet.begin(); itr!=OpenSet.end(); ++itr)
-    {
-      double f = prmplan.g[*itr]+ 3*dist_angles(prmplan.GetVertice(*itr), prmplan.GetVertice(goal_id), numofDOFs);
-      if (f<min_f)
-      {
-          min_f = f;
-          close_index = itr;
-      }
-    }
-    int current_id = *close_index;
+    // for(itr=OpenSet.begin(); itr!=OpenSet.end(); ++itr)
+    // {
+    //   double f = prmplan.g[*itr]+ 3*dist_angles(prmplan.GetVertice(*itr), prmplan.GetVertice(goal_ind), numofDOFs);
+    //   if (f<min_f)
+    //   {
+    //       min_f = f;
+    //       close_index = itr;
+    //   }
+    // }
+	pair<int, int> node = openSet.top();
+    int current_id = node.second;
     //mexPrintf("test2: %d\n", current_id);
 
     CloseSet.insert(current_id);
-    OpenSet.erase(close_index);
+    openSet.pop();
 
-    vector<int> successors = prmplan.GetSuccessors(current_id);
+    vector<int> successors = prmplan.edges[current_id];
     for(auto id :successors)
     {
-      if(id == goal_id)
+      if(id == goal_ind)
       {
         // mexPrintf("Found! \n");
         // mexPrintf("number of expanded node: %d\n", num_expanded);
-        found = true;
-        parent[goal_id] = current_id;
+        goalfound = true;
+        parent[goal_ind] = current_id;
         break;
       }
 
       if(CloseSet.count(id) == 0)
-      {
-        if(OpenSet.count(id) == 0)
-        {
-          OpenSet.insert(id);
-          prmplan.g[id] = prmplan.g[current_id] + dist_angles(prmplan.GetVertice(id), prmplan.GetVertice(current_id), numofDOFs);
-          parent[id] = current_id;
-        }
-        else
-        {
+      { 
+		  
+
           if(prmplan.g[id]> prmplan.g[current_id] + dist_angles(prmplan.GetVertice(id), prmplan.GetVertice(current_id), numofDOFs))
           {
             prmplan.g[id] = prmplan.g[current_id] + dist_angles(prmplan.GetVertice(id), prmplan.GetVertice(current_id), numofDOFs);
+			prmplan.f[id] = prmplan.g[id] + 3*dist_angles(prmplan.GetVertice(id), prmplan.GetVertice(goal_ind), numofDOFs);
+			openSet.push(make_pair(prmplan.f[id],id));
             parent[id] = current_id;
           }
-        }
+        
       }
     }
 
   }
 
 
-  if(found)
+  if(goalfound)
   {
+	// cout<<"SOHAIL-If you are checking this, Ask Bubbla out for a date. Rishi if it is you, convey it to Sohail"<<endl;
     vector<int> path;
-    int next_id = goal_id;
+    int next_id = goal_ind;
     while(next_id!=0)
     {
       path.insert(path.begin(),next_id);

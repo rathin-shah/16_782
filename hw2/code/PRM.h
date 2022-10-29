@@ -21,6 +21,7 @@ public:
 	vector<vector<int>> edges;
     unordered_map<int,double> cost;
     unordered_map<int, double> g;
+    unordered_map<int, double> f;
 	int numofDOFs;
 
 	void PRMplan_init(int nofDOFs, double* armstart_anglesV_rad)
@@ -29,6 +30,8 @@ public:
 		vertices.clear();
 		edges.clear();
 		vertices.push_back(armstart_anglesV_rad);
+        g[0]=0;
+
 	}
 
 	double* GetVertice(int id)
@@ -77,5 +80,3 @@ public:
     // }
 
 };
-
-
