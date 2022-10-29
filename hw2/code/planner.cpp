@@ -458,7 +458,7 @@ static void RRTplan(
 	bool goalfound = false;
 	double *random_config = new double[numofDOFs * sizeof(double)];
 	double epsilon = 1;
-	srand(time(NULL));
+	srand(10);
 	while (goalfound == false and k < 80000)
 	{
 		random_config = RandomConfig(map, numofDOFs, x_size, y_size);
@@ -531,9 +531,9 @@ static void RRTConnectplan(
 	double *random_config = new double[numofDOFs * sizeof(double)];
 	// Remember to remove the seed
 	// std::srand(10);
-	double epsilon = 0.2;
+	double epsilon = 0.6;
 	bool swap = true;
-	srand(time(NULL));
+	srand(10);
 	while (goalfound == false and k < 80000)
 	{
 		k++;
@@ -650,7 +650,7 @@ static void RRTstarplan(
 	*plan = NULL;
 	*planlength = 0;
 	int k = 0;
-	srand(time(NULL));
+	srand(10);
 
 	RRTplan_C rrtstar;
 	bool goalfound = false;
@@ -768,7 +768,7 @@ static void PRMplan_f(
 	double radius = 1.5;
 	int min_dist_id = -1;
     int min_start_dist_id = -1;
-    srand(time(NULL));
+    srand(10);
 	while (i < num_of_samples)
 	{
 		i++;
@@ -1025,8 +1025,8 @@ int main(int argc, char **argv)
 	// RRTplan(map, x_size, y_size, startPos, goalPos, numOfDOFs, &plan, &planlength);
 	// RRTConnectplan(map, x_size, y_size, startPos, goalPos, numOfDOFs, &plan, &planlength);
 	// planner(map, x_size, y_size, startPos, goalPos, numOfDOFs, &plan, &planlength);
-	// RRTstarplan(map, x_size, y_size, startPos, goalPos, numOfDOFs, &plan, &planlength);
-	PRMplan_f(map, x_size, y_size, startPos, goalPos, numOfDOFs, &plan, &planlength);
+	RRTstarplan(map, x_size, y_size, startPos, goalPos, numOfDOFs, &plan, &planlength);
+	// PRMplan_f(map, x_size, y_size, startPos, goalPos, numOfDOFs, &plan, &planlength);
 	//// Feel free to modify anything above.
 	//// If you modify something below, please change it back afterwards as my
 	//// grading script will not work and you will recieve a 0.
