@@ -70,6 +70,10 @@ public:
         return this->truth;
     }
 
+    void change_truth(){
+        this->truth=!this->truth;
+    }
+
     friend ostream& operator<<(ostream& os, const GroundedCondition& pred)
     {
         os << pred.toString() << " ";
@@ -330,6 +334,10 @@ private:
     unordered_set<string> symbols;
 
 public:
+    unordered_set<GroundedCondition, GroundedConditionHasher, GroundedConditionComparator> get_initial_condition()
+    {
+        return this->initial_conditions;
+    }
     void remove_initial_condition(GroundedCondition gc)
     {
         this->initial_conditions.erase(gc);
@@ -377,6 +385,10 @@ public:
     {
         return this->actions;
     }
+    unordered_set<GroundedCondition, GroundedConditionHasher, GroundedConditionComparator> get_goal_condition()
+    {
+        return this->goal_conditions;
+    }
 
     friend ostream& operator<<(ostream& os, const Env& w)
     {
@@ -406,7 +418,8 @@ class GroundedAction
 private:
     string name;
     list<string> arg_values;
-
+    unordered_set<GroundedCondition, GroundedConditionHasher, GroundedConditionComparator> gPreconditions;
+    unordered_set<GroundedCondition, GroundedConditionHasher, GroundedConditionComparator> gEffects;
 public:
     GroundedAction(string name, list<string> arg_values)
     {
@@ -415,6 +428,18 @@ public:
         {
             this->arg_values.push_back(ar);
         }
+    }
+    GroundedAction(string name, list<string> arg_values,
+                   unordered_set<GroundedCondition, GroundedConditionHasher, GroundedConditionComparator> g_precon,
+                   unordered_set<GroundedCondition, GroundedConditionHasher, GroundedConditionComparator> g_effect)
+    {
+        this->name = name;
+        for (string ar : arg_values)
+            this->arg_values.push_back(ar);
+        for (GroundedCondition gc : g_precon)
+            this->gPreconditions.insert(gc);
+        for (GroundedCondition gc : g_effect)
+            this->gEffects.insert(gc);
     }
 
     string get_name() const
@@ -426,7 +451,15 @@ public:
     {
         return this->arg_values;
     }
+    unordered_set<GroundedCondition, GroundedConditionHasher, GroundedConditionComparator> get_preconditions()
+    {
+        return this->gPreconditions;
+    }
 
+    unordered_set<GroundedCondition, GroundedConditionHasher, GroundedConditionComparator> get_effects()
+    {
+        return this->gEffects;
+    }
     bool operator==(const GroundedAction& rhs) const
     {
         if (this->name != rhs.name || this->arg_values.size() != rhs.arg_values.size())
@@ -774,16 +807,113 @@ void get_permutations(vector<vector<string>>& permutations,vector<string> &comb)
 
 
 }
+void getGroundedActions(Action &action,vector<vector<string>>&perm,vector<GroundedAction> &allgactions){
+    unordered_set<Condition, ConditionHasher, ConditionComparator> action_effect = action.get_effects();    
+    unordered_set<Condition, ConditionHasher, ConditionComparator> action_pcond = action.get_preconditions();
+
+    for(vector<string> singleaction:perm){
+        unordered_map<string,string> argsmap;
+        list<string> action_arg=action.get_args();
+        list<string> g_action_arg(singleaction.begin(),singleaction.end());
+        for( list<string>::const_iterator a_ = action_arg.begin(),g_ = g_action_arg.begin();a_!=action_arg.end();++a_,++g_){
+                argsmap[*a_] = *g_;
+        }
+
+        unordered_set<GroundedCondition, GroundedConditionHasher, GroundedConditionComparator> GC_pre;
+        unordered_set<GroundedCondition,GroundedConditionHasher,GroundedConditionComparator> GC_eff;
+
+        for(Condition pre_cond : action_pcond){
+            list<string> g_pre_cond_arg;
+            list<string> pre_cond_arg = pre_cond.get_args();
+
+            for(list<string>::const_iterator p_ = pre_cond_arg.begin();p_ != pre_cond_arg.end();++p_){
+
+                if(argsmap[*p_] == ""){
+                    g_pre_cond_arg.push_back(*p_);
+                }
+                else{
+                    g_pre_cond_arg.push_back(argsmap[*p_]);
+                }
+            }
+            GroundedCondition groundc (pre_cond.get_predicate(),g_pre_cond_arg,pre_cond.get_truth());
+            GC_pre.insert(groundc);
+        }
+
+        for(Condition eff : action_effect)
+      {
+            list<string> gceffects_arg;
+            list<string> effectArgs = eff.get_args();  // Make direct
+             
+            for(list<string>::const_iterator e_ = effectArgs.begin(); e_ != effectArgs.end() ; ++e_)
+            {
+                if(argsmap[*e_] == "")
+                {
+                    gceffects_arg.push_back(*e_);
+                }
+                else
+                {
+                    gceffects_arg.push_back(argsmap[*e_]);
+                }
+                // cout<<argMap[*e_it]<<" -> "<<*e_it;
+            }
+
+            GroundedCondition gc(eff.get_predicate(), gceffects_arg, eff.get_truth());
+            GC_eff.insert(gc);
+        }
+        GroundedAction ga(action.get_name(),g_action_arg,GC_pre,GC_eff);
+        allgactions.push_back(ga);
+
+  
+
+    
+    }   
+
+}
+string hashst(unordered_set<GroundedCondition, GroundedConditionHasher, GroundedConditionComparator>& stateset)
+{
+    set<string> strings;
+    string hashedS = "";
+
+    for(GroundedCondition gc : stateset)
+    {
+        strings.insert(gc.toString());
+    }
+    for (auto it = strings.begin(); it != strings.end(); it++) 
+        hashedS += *it; 
+    
+    return hashedS;
+}
+struct node
+    {
+        unordered_set<GroundedCondition, GroundedConditionHasher, GroundedConditionComparator> state;
+
+        double f = DBL_MAX;
+        double g = DBL_MAX;
+        double h = DBL_MAX;
+        
+        int parentIndex = -1;
+
+        string parentNodeState = "";
+    };
+bool goalReached(node & curNode,Env* env)
+{
+    for(GroundedCondition gc : env->get_goal_condition())
+    {   
+        if(curNode.state.find(gc) == curNode.state.end())
+            return 0;
+    }
+    return 1;
+}
 
 list<GroundedAction> planner(Env* env)
 {
     // this is where you insert your planner
 
     // blocks world example
-    list<GroundedAction> actions;
-    actions.push_back(GroundedAction("MoveToTable", { "A", "B" }));
-    actions.push_back(GroundedAction("Move", { "C", "Table", "A" }));
-    actions.push_back(GroundedAction("Move", { "B", "Table", "C" }));
+    // list<GroundedAction> actions;
+    // actions.push_back(GroundedAction("MoveToTable", { "A", "B" }));
+    // actions.push_back(GroundedAction("Move", { "C", "Table", "A" }));
+    // actions.push_back(GroundedAction("Move", { "B", "Table", "C" }));
 
     // starting to code
 
@@ -791,36 +921,143 @@ list<GroundedAction> planner(Env* env)
     listofActions = env->list_of_actions();
     std::unordered_set<string> listofSymbols = env->get_symbols();
     vector<string> symbols(listofSymbols.begin(), listofSymbols.end());
- 
+    vector<GroundedAction> AllGactions;
     vector<vector<string>> combinations;
     vector<vector<string>> permutations;
     int numofSym = listofSymbols.size();
+    vector<string> temp;
     for(Action action:listofActions){
         int args = action.get_args().size();
-        vector<string> temp;
+        
         get_combinations(0, args,combinations,temp,numofSym,symbols);
         for(int i=0;i<combinations.size();i++){
             get_permutations(permutations,combinations[i]);
+ 
 
         }
- 
+    
+    getGroundedActions(action,permutations,AllGactions);
+    // cout<<permutations.size()<<endl;
+    permutations.clear();
+    combinations.clear();
+    temp.clear();
     }
 
 
+// Starting ASTAR////////////////////////////////
+
+    unordered_map<string, bool> closedList;     
+    unordered_map<string, node> nodeInfo;
+    priority_queue<pair<double, string>, vector<pair<double, string>>, greater<pair<double, string>>> openList;    
+    node firstNode;
+    firstNode.state = env->get_initial_condition();
+    string firstNodestring;
+    // firstNodestring = hashst(firstNode.state);
+    firstNode.g = 0;
+    firstNode.h = 0;
+    nodeInfo[hashst(firstNode.state)] = firstNode;
+    openList.push(make_pair(firstNode.f,hashst(firstNode.state)));
+    int n_states = 0;
+    while(!openList.empty()){
+
+        pair<double,string> curNodestring = openList.top();
+        openList.pop();
+
+        if(closedList[curNodestring.second]==true){
+            continue;
+        }
+        closedList[curNodestring.second]= true;
+        n_states++;
+        
+        node current_node = nodeInfo[curNodestring.second];
+
+        if(goalReached(current_node,env)){
+
+            cout<<"DONEEEE"<<endl;
+              
+
+        }
+
+        int count_action = -1;
+        bool possibleaction = 1;
+
+        string newhnode;
+
+        for(GroundedAction gaction : AllGactions){
+            count_action++;
+            possibleaction = true;
+
+            for(GroundedCondition gcond : gaction.get_preconditions()){
+                if(current_node.state.find(gcond) == current_node.state.end())
+                {
+                    possibleaction = false;
+                    break;
+                }                
+            }
+
+            if(possibleaction){
+                node n_node;
+                n_node.state = current_node.state;
+                for(GroundedCondition effect : gaction.get_effects())
+                {
+                    if(effect.get_truth())
+                    {
+                        n_node.state.insert(effect);
+                    }
+                    else
+                    {
+                        // Remove from state
+                        effect.change_truth();
+                        n_node.state.erase(n_node.state.find(effect));
+                    }
+                }  
+                newhnode = hashst(n_node.state);
+                if (closedList[newhnode])
+                    continue;
+
+                n_node.g = current_node.g + 1;
+                n_node.h = 1;
+                n_node.f = n_node.g + n_node.h;
+
+                // If the node has not been seen before (or) if the node now has a lesser cost path
+                if(nodeInfo.find(newhnode) == nodeInfo.end() || n_node.g < nodeInfo[newhnode].g)
+                {
+                    n_node.parentIndex = count_action;
+                    n_node.parentNodeState = curNodestring.second;
+                    nodeInfo[newhnode] = n_node;
+                    openList.push(make_pair(n_node.f, newhnode));
+                }    
+            }
+
+          
+
+        }
+        
+
+
+
+
+
+
+    }
+    
+
+
+
 
     
     
     
     
-    return actions;
+    // return actions;
 }
 
 int main(int argc, char* argv[])
 {
     // DO NOT CHANGE THIS FUNCTION
-    char* filename = (char*)("example.txt");
-    if (argc > 1)
-        filename = argv[1];
+    char* filename = (char*)("BlocksTriangle.txt");
+    // if (argc > 1)
+    //     filename = argv[1];
 
     cout << "Environment: " << filename << endl << endl;
     Env* env = create_env(filename);
