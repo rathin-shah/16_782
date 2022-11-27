@@ -905,6 +905,139 @@ bool goalReached(node & curNode,Env* env)
     return 1;
 }
 
+double findHeuristic(node current_node,Env* env){
+    double h = 0;
+    for(GroundedCondition g:env->get_goal_condition()){
+
+        if(current_node.state.find(g) == current_node.state.end()){
+            h++;
+        }
+
+    }
+
+    return h;
+
+}
+
+
+
+stack<GroundedAction> backTrack(string goalnodestr,string initnodestr, unordered_map<string, node> nodeInfo, stack<GroundedAction> &path,vector<GroundedAction> AllGactions){
+    string currNodeStr = goalnodestr;
+    while(currNodeStr != initnodestr)
+    {
+        path.push(AllGactions[nodeInfo[currNodeStr].parentIndex]);
+        currNodeStr = nodeInfo[currNodeStr].parentNodeState;
+    }
+  
+    return path;
+}
+
+double h_astar (node current_node,Env* env,vector<GroundedAction> AllGactions){
+    unordered_map<string, bool> closedList;     
+    unordered_map<string, node> nodeInfo;
+    priority_queue<pair<double, string>, vector<pair<double, string>>, greater<pair<double, string>>> openList;    
+    node firstNode = current_node;
+    double huer = 0;
+    string firstNodestring;
+    firstNodestring = hashst(firstNode.state);
+    firstNode.g = 0;
+    firstNode.h = 0;
+    firstNode.f = 0;
+    nodeInfo[hashst(firstNode.state)] = firstNode;
+    openList.push(make_pair(firstNode.f,hashst(firstNode.state)));
+    int n_states = 0;
+    stack<GroundedAction> path;
+    while(!openList.empty()){
+        
+        // cout<<"in open list"<<endl;
+        pair<double,string> curNodestring = openList.top();
+        openList.pop();
+
+        if(closedList[curNodestring.second]==true){
+            continue;
+        }
+        closedList[curNodestring.second]= true;
+        n_states++;
+        
+        node current_node = nodeInfo[curNodestring.second];
+       
+        if(goalReached(current_node,env)){
+            // cout<<"in goallllllll"<<endl;
+            return current_node.g;
+            break;
+              
+
+        }
+
+
+        bool possibleaction = 1;
+        int count_action = -1;
+        string newhnode;
+
+        for(GroundedAction gaction : AllGactions){
+            count_action++;
+            possibleaction = true;
+
+            for(GroundedCondition gcond : gaction.get_preconditions()){
+                if(current_node.state.find(gcond) == current_node.state.end())
+                {
+                    possibleaction = false;
+                    break;
+                }                
+            }
+
+            if(possibleaction){
+                node n_node;
+                n_node.state = current_node.state;
+                for(GroundedCondition effect : gaction.get_effects())
+                {
+                    if(effect.get_truth())
+                    {
+                        n_node.state.insert(effect);
+                    }
+                    // else
+                    // {
+                    //     // Remove from state
+                    //     effect.change_truth();
+                    //     n_node.state.erase(n_node.state.find(effect));
+                    // }
+                }  
+                newhnode = hashst(n_node.state);
+                if (closedList[newhnode])
+                    continue;
+
+                n_node.g = current_node.g + 1;
+                // n_node.h = findHeuristic(current_node,env);
+
+                n_node.h = 0;
+                n_node.f = n_node.g + n_node.h;
+
+                // If the node has not been seen before (or) if the node now has a lesser cost path
+                if(nodeInfo.find(newhnode) == nodeInfo.end() || n_node.g < nodeInfo[newhnode].g)
+                {
+                    n_node.parentIndex = count_action;
+                    n_node.parentNodeState = curNodestring.second;
+                    nodeInfo[newhnode] = n_node;
+                    openList.push(make_pair(n_node.f, newhnode));
+                }    
+            }
+
+          
+
+        }
+        
+
+
+
+
+
+
+    }
+     
+    
+
+
+}
 list<GroundedAction> planner(Env* env)
 {
     // this is where you insert your planner
@@ -952,14 +1085,16 @@ list<GroundedAction> planner(Env* env)
     node firstNode;
     firstNode.state = env->get_initial_condition();
     string firstNodestring;
-    // firstNodestring = hashst(firstNode.state);
+    firstNodestring = hashst(firstNode.state);
     firstNode.g = 0;
+    firstNode.f = 0;
     firstNode.h = 0;
     nodeInfo[hashst(firstNode.state)] = firstNode;
     openList.push(make_pair(firstNode.f,hashst(firstNode.state)));
     int n_states = 0;
+    stack<GroundedAction> path;
     while(!openList.empty()){
-
+        
         pair<double,string> curNodestring = openList.top();
         openList.pop();
 
@@ -968,12 +1103,14 @@ list<GroundedAction> planner(Env* env)
         }
         closedList[curNodestring.second]= true;
         n_states++;
-        
+        cout<<n_states<<endl;       
         node current_node = nodeInfo[curNodestring.second];
 
         if(goalReached(current_node,env)){
 
-            cout<<"DONEEEE"<<endl;
+            path = backTrack(curNodestring.second,firstNodestring,nodeInfo,path,AllGactions);
+            break;
+            // cout<<"DONEEEE"<<endl;
               
 
         }
@@ -1016,7 +1153,9 @@ list<GroundedAction> planner(Env* env)
                     continue;
 
                 n_node.g = current_node.g + 1;
-                n_node.h = 1;
+                // n_node.h = findHeuristic(current_node,env);
+                n_node.h = 10*h_astar(current_node,env,AllGactions);
+                // n_node.h = 0;
                 n_node.f = n_node.g + n_node.h;
 
                 // If the node has not been seen before (or) if the node now has a lesser cost path
@@ -1042,9 +1181,14 @@ list<GroundedAction> planner(Env* env)
     }
     
 
+    list<GroundedAction> actions;
+     while(!path.empty())
+    {
+        actions.push_back(path.top());
+        path.pop();
+    }
 
-
-
+    return actions;
     
     
     
@@ -1055,7 +1199,7 @@ list<GroundedAction> planner(Env* env)
 int main(int argc, char* argv[])
 {
     // DO NOT CHANGE THIS FUNCTION
-    char* filename = (char*)("BlocksTriangle.txt");
+    char* filename = (char*)("FireExtinguisher.txt");
     // if (argc > 1)
     //     filename = argv[1];
 
@@ -1066,8 +1210,12 @@ int main(int argc, char* argv[])
         cout << *env;
     }
 
+    
+    int start = (int)clock();
     list<GroundedAction> actions = planner(env);
-
+    int Time_till_now = (int)(clock() - start);
+    int steps_moved = (int)ceil(Time_till_now / ((CLOCKS_PER_SEC)));
+    cout<<steps_moved<<endl;
     cout << "\nPlan: " << endl;
     for (GroundedAction gac : actions)
     {
